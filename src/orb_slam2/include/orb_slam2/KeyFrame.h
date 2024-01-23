@@ -212,4 +212,5 @@ protected:
 
 } // namespace ORB_SLAM2
 
+void pose2Json(const cv::Mat &pose, Json::Value &jsonPose);
 #endif // KEYFRAME_H

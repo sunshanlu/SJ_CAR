@@ -2,7 +2,7 @@
 
 SystemRos2::SystemRos2()
     : Node("ORB_SLAM2") {
-    std::string voc_fp = "/home/sj/Project/SJ_CAR/Vocabulary/ORBvoc.txt";
+    std::string voc_fp = "/home/sj/Project/SJ_CAR/src/orb_slam2/Vocabulary/ORBvoc.txt";
     std::string setting_fp = "/home/sj/Project/SJ_CAR/config/KITTI00-02.yaml";
 
     mp_pose3dPub = create_publisher<Pose>("camera/pose3d", 10);
@@ -40,8 +40,13 @@ bool SystemRos2::run() {
     // 停止SLAM系统的所有线程
     mp_slamSystem->Shutdown();
 
+    // 保存地图信息
+    RCLCPP_INFO(this->get_logger(), "正在保存地图到 /home/sj/Project/SJ_CAR/src/orb_slam2/map/map.json...");
+    saveMap("/home/sj/Project/SJ_CAR/src/orb_slam2/map/map.json");
+
     // 统计跟踪信息
     trickStatistic();
+
     return true;
 }
 

@@ -1,5 +1,7 @@
+#include <fstream>
 #include <jsoncpp/json/json.h>
 #include <mutex>
+#include <rclcpp/rclcpp.hpp>
 
 #include "Map.h"
 
@@ -100,19 +102,23 @@ void Map::clear() {
 bool Map::saveMap(const std::string &filename) {
     // 寻找一个能用的关键帧的指针来提取那些相同的信息
     KeyFrame *refkf = nullptr;
+    RCLCPP_INFO(rclcpp::get_logger("Map"), "地图中目前有关键帧数目为%d", mspKeyFrames.size());
     for (auto keyframe : mspKeyFrames) {
-        if (!keyframe && !keyframe->isBad()) {
+        if (keyframe != nullptr && keyframe->isBad() == false) {
             refkf = keyframe;
             break;
         }
     }
-    if (!refkf) {
+    if (refkf == nullptr) {
+        RCLCPP_WARN(rclcpp::get_logger("Map"), "地图中没有可用关键帧！");
         return false;
     }
-    Json::Value root, static_property;
+    Json::Value root, keyframes, static_property;
     Json::FastWriter writer;
+
     refkf->saveCommonData2Json(static_property);
-    root["static_property"] = static_property;
+
+    keyframes["static_property"] = static_property;
 
     // 将关键帧中不尽相同的数据放入JSON列表中
     Json::Value items;
@@ -124,9 +130,17 @@ bool Map::saveMap(const std::string &filename) {
             continue;
         }
         Json::Value item;
+
         keyframe->saveKeyFrame2Json(item);
         items.append(item);
     }
+    keyframes["items"] = items;
+    root["keyframes"] = keyframes;
+    auto json_str = writer.write(root);
+    // std::cout << json_str << std::endl;
+    std::ofstream mapOfs(filename);
+    mapOfs << json_str << std::endl;
+
     return true;
 }
 

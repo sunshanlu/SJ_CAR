@@ -1,4 +1,5 @@
 #include <mutex>
+#include <rclcpp/rclcpp.hpp>
 
 #include "Converter.h"
 #include "KeyFrame.h"
@@ -623,15 +624,13 @@ void KeyFrame::saveKeyFrame2Json(Json::Value &keyFrameJson) {
     keyFrameJson["mbFirstConnection"] = mbFirstConnection;
 
     Json::Value mTcwGBA_json, mTcwBefGBA_json, mTcp_json, Tcw_json, Twc_json, Ow_json, Cw_json;
-    for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            mTcwGBA_json.append(mTcwGBA.at<float>(i, j));
-            mTcwBefGBA_json.append(mTcwBefGBA.at<float>(i, j));
-            mTcp_json.append(mTcp.at<float>(i, j));
-            Tcw_json.append(Tcw.at<float>(i, j));
-            Twc_json.append(Twc.at<float>(i, j));
-        }
-    }
+
+    pose2Json(mTcwGBA, mTcwGBA_json);
+    pose2Json(mTcwBefGBA, mTcwBefGBA_json);
+    pose2Json(mTcp, mTcp_json);
+    pose2Json(Tcw, Tcw_json);
+    pose2Json(Twc, Twc_json);
+
     for (int i = 0; i < 3; ++i) {
         Ow_json.append(Ow.at<float>(i, 0));
         Cw_json.append(Cw.at<float>(i, 0));
@@ -677,7 +676,6 @@ void KeyFrame::saveKeyFrame2Json(Json::Value &keyFrameJson) {
     keyFrameJson["mvpMapPoints"] = mvpMapPoints_json;
     keyFrameJson["mDescriptors"] = mDescriptors_json;
 
-    // keyFrameJson["mFeatVec"] = mFeatVec;
     Json::Value mBowVec_json;
     for (auto keyFrameJson : mBowVec) {
         Json::Value mBowVec_item;
@@ -685,6 +683,7 @@ void KeyFrame::saveKeyFrame2Json(Json::Value &keyFrameJson) {
         mBowVec_item["WordValue"] = keyFrameJson.second;
         mBowVec_json.append(mBowVec_item);
     }
+
     // NodeId, std::vector<unsigned int>
     Json::Value mFeatVec_json;
     for (auto keyFrameJson : mFeatVec) {
@@ -697,10 +696,12 @@ void KeyFrame::saveKeyFrame2Json(Json::Value &keyFrameJson) {
         mFeatVec_json.append(mFeatVec_item);
     }
     keyFrameJson["mFeatVec"] = mFeatVec_json;
-    keyFrameJson["mBowVec"] = mFeatVec_json;
+    keyFrameJson["mBowVec"] = mBowVec_json;
 
     // mConnectedKeyFrameWeights可以由排序好的mvpOrderedConnectedKeyFrames和mvOrderedWeights得出
     Json::Value mvpOrderedConnectedKeyFrames_json, mvOrderedWeights_json;
+    mvpOrderedConnectedKeyFrames_json.resize(0);
+    mvOrderedWeights_json.resize(0);
     for (int ibegin = 0, iend = mvpOrderedConnectedKeyFrames.size(); ibegin < iend; ++ibegin) {
         auto kf = mvpOrderedConnectedKeyFrames[ibegin];
         auto weight = mvOrderedWeights[ibegin];
@@ -710,17 +711,44 @@ void KeyFrame::saveKeyFrame2Json(Json::Value &keyFrameJson) {
     keyFrameJson["mvpOrderedConnectedKeyFrames"] = mvpOrderedConnectedKeyFrames_json;
     keyFrameJson["mvOrderedWeights"] = mvOrderedWeights_json;
 
-    keyFrameJson["mpParent"] = (unsigned long long)mpParent->mnId;
+    if (mpParent && mpParent->isBad() == false)
+        // 保证父关键帧存在
+        keyFrameJson["mpParent"] = (unsigned long long)mpParent->mnId;
+    else {
+        keyFrameJson["mpParent"] = Json::nullValue;
+    }
     Json::Value mspChildrens_json, mspLoopEdges_json;
+    mspChildrens_json.resize(0);
+    mspLoopEdges_json.resize(0);
     for (auto childern : mspChildrens) {
-        mspChildrens_json.append((unsigned long long)childern->mnId);
+        if (childern && childern->isBad() == false)
+            mspChildrens_json.append((unsigned long long)childern->mnId);
     }
     keyFrameJson["mspChildrens"] = mspChildrens_json;
 
     for (auto edge : mspLoopEdges) {
-        mspLoopEdges_json.append((unsigned long long)edge->mnId);
+        if (edge && edge->isBad() == false)
+            mspLoopEdges_json.append((unsigned long long)edge->mnId);
     }
     keyFrameJson["mspLoopEdges"] = mspLoopEdges_json;
+
+    Json::Value mGrid_json;
+    mGrid_json.resize(0);
+    for (auto i : mGrid) {
+        Json::Value mGrid_1;
+        mGrid_1.resize(0);
+        for (auto j : i) {
+            Json::Value mGrid_2;
+            mGrid_2.resize(0);
+            for (auto k : j) {
+                mGrid_2.append((unsigned long long)k);
+            }
+            mGrid_1.append(mGrid_2);
+        }
+        mGrid_json.append(mGrid_1);
+    }
+    keyFrameJson["mGrid"] = mGrid_json;
+
 }
 
 /**
@@ -753,7 +781,7 @@ void KeyFrame::saveCommonData2Json(Json::Value &commonJson) {
     commonJson["mnMaxY"] = mnMaxY;
     commonJson["mHalfBaseline"] = mHalfBaseline;
 
-    Json::Value mvScaleFactors_json, mvLevelSigma2_json, mvInvLevelSigma2_json, mK_json, mGrid_json;
+    Json::Value mvScaleFactors_json, mvLevelSigma2_json, mvInvLevelSigma2_json, mK_json;
     for (int i = 0, iend = mvScaleFactors.size(); i < iend; ++i) {
         mvScaleFactors_json.append(mvScaleFactors[i]);
         mvLevelSigma2_json.append(mvLevelSigma2[i]);
@@ -769,20 +797,19 @@ void KeyFrame::saveCommonData2Json(Json::Value &commonJson) {
         }
     }
     commonJson["mK"] = mK_json;
-
-    for (auto i : mGrid) {
-        Json::Value mGrid_1;
-        for (auto j : i) {
-            Json::Value mGrid_2;
-            for (auto k : j) {
-                mGrid_2.append((unsigned long long)k);
-            }
-            mGrid_1.append(mGrid_2);
-        }
-        mGrid_json.append(mGrid_1);
-    }
-
-    commonJson["mGrid"] = mGrid_json;
 }
 
 } // namespace ORB_SLAM2
+
+void pose2Json(const cv::Mat &pose, Json::Value &jsonPose) {
+    if (pose.empty()) {
+        // 非法位姿，构建空数组
+        jsonPose.resize(0);
+        return;
+    }
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            jsonPose.append(pose.at<double>(i, j));
+        }
+    }
+}

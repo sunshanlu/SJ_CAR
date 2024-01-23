@@ -5,6 +5,8 @@ bin/
 install/
 .vscode/
 msg_gen/
+map/
+Vocabulary/
 srv_gen/
 msg/*Action.msg
 msg/*ActionFeedback.msg

@@ -83,3 +83,15 @@ void SystemRos2::publishPose3D(const cv::Mat &pose3d) {
     pose.position.y = pose3d.at<float>(2, 3);
     mp_pose3dPub->publish(pose);
 }
+
+// 保存地图
+bool SystemRos2::saveMap(const std::string &filename) {
+    ORB_SLAM2::Map *map = mp_slamSystem->GetMap();
+    return map->saveMap(filename);
+}
+
+// 加载地图
+bool SystemRos2::loadMap(const std::string &filename) {
+    ORB_SLAM2::Map *map = mp_slamSystem->GetMap();
+    return map->loadMap(filename);
+}

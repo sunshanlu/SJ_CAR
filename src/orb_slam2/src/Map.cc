@@ -1,7 +1,7 @@
+#include <jsoncpp/json/json.h>
 #include <mutex>
 
 #include "Map.h"
-
 
 namespace ORB_SLAM2 {
 
@@ -34,7 +34,7 @@ void Map::EraseKeyFrame(KeyFrame *pKF) {
     mspKeyFrames.erase(pKF);
 
     // TODO: This only erase the pointer.
-    // Delete the MapPoint
+    // Delete the Keyframe
 }
 
 void Map::SetReferenceMapPoints(const vector<MapPoint *> &vpMPs) {
@@ -95,5 +95,42 @@ void Map::clear() {
     mvpReferenceMapPoints.clear();
     mvpKeyFrameOrigins.clear();
 }
+
+//! 添加地图的保存api
+bool Map::saveMap(const std::string &filename) {
+    // 寻找一个能用的关键帧的指针来提取那些相同的信息
+    KeyFrame *refkf = nullptr;
+    for (auto keyframe : mspKeyFrames) {
+        if (!keyframe && !keyframe->isBad()) {
+            refkf = keyframe;
+            break;
+        }
+    }
+    if (!refkf) {
+        return false;
+    }
+    Json::Value root, static_property;
+    Json::FastWriter writer;
+    refkf->saveCommonData2Json(static_property);
+    root["static_property"] = static_property;
+
+    // 将关键帧中不尽相同的数据放入JSON列表中
+    Json::Value items;
+    for (auto keyframe : mspKeyFrames) {
+        if (!keyframe) {
+            continue;
+        }
+        if (keyframe->isBad()) {
+            continue;
+        }
+        Json::Value item;
+        keyframe->saveKeyFrame2Json(item);
+        items.append(item);
+    }
+    return true;
+}
+
+//! 添加地图的加载api
+bool Map::loadMap(const std::string &filename) { return true; }
 
 } // namespace ORB_SLAM2

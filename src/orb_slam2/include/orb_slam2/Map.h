@@ -35,6 +35,12 @@ public:
 
     void clear();
 
+    //! 添加地图的保存api
+    bool saveMap(const std::string &filename);
+
+    //! 添加地图的加载api
+    bool loadMap(const std::string &filename);
+
     std::vector<KeyFrame *> mvpKeyFrameOrigins;
 
     std::mutex mMutexMapUpdate;

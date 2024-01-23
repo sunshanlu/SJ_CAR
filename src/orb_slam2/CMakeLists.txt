@@ -29,14 +29,22 @@ find_package(Pangolin REQUIRED)
 find_package(Eigen3 3.1.0 REQUIRED)
 find_package(realsense2 REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(PkgConfig)
+pkg_check_modules(JSONCPP jsoncpp)
 
 file(GLOB ORB_SLAM2_SRC ${PROJECT_SOURCE_DIR}/src/*.cc)
 add_executable(orb_slam2 ${ORB_SLAM2_SRC})
 
 ament_target_dependencies(orb_slam2 "rclcpp" "sensor_msgs")
 
-target_link_libraries(orb_slam2 ${OpenCV_LIBS} ${Pangolin_LIBRARIES}
-                      ${DBoW2_LIBRARY} ${G2O_LIBRARY} ${realsense2_LIBRARY})
+target_link_libraries(
+    orb_slam2
+    ${OpenCV_LIBS}
+    ${Pangolin_LIBRARIES}
+    ${DBoW2_LIBRARY}
+    ${G2O_LIBRARY}
+    ${realsense2_LIBRARY}
+    ${JSONCPP_LIBRARIES})
 
 target_include_directories(
     orb_slam2

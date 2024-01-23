@@ -8,6 +8,7 @@
 
 #include "Camera.h"
 #include "System.h"
+#include "Map.h"
 
 using namespace geometry_msgs::msg;
 

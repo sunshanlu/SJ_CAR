@@ -23,10 +23,8 @@ class Map;
 class Tracking;
 class LocalMapping;
 class LoopClosing;
-class SystemRos2;
 
 class System {
-    friend class SystemRos2; // 提高SystemRos2的访问权限
 
 public:
     typedef std::shared_ptr<ORB_SLAM2::System> SharedPtr;
@@ -64,6 +62,9 @@ public:
 
     // Reset the system (clear map)
     void Reset();
+
+    //! 增加地图获取api
+    Map *GetMap() { return mpMap; }
 
     // All threads will be requested to finish.
     // It waits until all threads have finished.

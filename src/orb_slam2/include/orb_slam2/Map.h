@@ -49,6 +49,10 @@ public:
     std::mutex mMutexPointCreation;
 
 protected:
+    void saveKeyframesInMap(const std::string &fp);   ///< 保存关键帧的api
+    void saveMappointsInMap(const std::string &fp);   ///< 保存地图点的api
+    bool saveCommonData(const std::string &filename); ///< 保存关键帧和地图点公共数据的api
+
     std::set<MapPoint *> mspMapPoints;
     std::set<KeyFrame *> mspKeyFrames;
 

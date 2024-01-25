@@ -3,7 +3,6 @@
 #include "MapPoint.h"
 #include "ORBmatcher.h"
 
-
 namespace ORB_SLAM2 {
 
 long unsigned int MapPoint::nNextId = 0;
@@ -385,5 +384,95 @@ int MapPoint::PredictScale(const float &currentDist, Frame *pF) {
 
     return nScale;
 }
+
+//! 保存地图点到JSON
+void MapPoint::saveMapPoint2json(Json::Value &mapPointJson) {
+    mapPointJson["mnId"] = (unsigned long long)mnId;
+    mapPointJson["mnFirstKFid"] = (unsigned long long)mnFirstKFid;
+    mapPointJson["mnFirstFrame"] = (unsigned long long)mnFirstFrame;
+    mapPointJson["mnTrackReferenceForFrame"] = (unsigned long long)mnTrackReferenceForFrame;
+    mapPointJson["mnLastFrameSeen"] = (unsigned long long)mnLastFrameSeen;
+    mapPointJson["mnBALocalForKF"] = (unsigned long long)mnBALocalForKF;
+    mapPointJson["mnFuseCandidateForKF"] = (unsigned long long)mnFuseCandidateForKF;
+    mapPointJson["mnLoopPointForKF"] = (unsigned long long)mnLoopPointForKF;
+    mapPointJson["mnCorrectedByKF"] = (unsigned long long)mnCorrectedByKF;
+    mapPointJson["mnCorrectedReference"] = (unsigned long long)mnCorrectedReference;
+    mapPointJson["mnBAGlobalForKF"] = (unsigned long long)mnBAGlobalForKF;
+
+    mapPointJson["nObs"] = nObs;
+    mapPointJson["mTrackProjX"] = mTrackProjX;
+    mapPointJson["mTrackProjY"] = mTrackProjY;
+    mapPointJson["mTrackProjXR"] = mTrackProjXR;
+    mapPointJson["mbTrackInView"] = mbTrackInView;
+    mapPointJson["mnTrackScaleLevel"] = mnTrackScaleLevel;
+    mapPointJson["mTrackViewCos"] = mTrackViewCos;
+    mapPointJson["mnFound"] = mnFound;
+    mapPointJson["mbBad"] = mbBad;
+    mapPointJson["mnVisible"] = mnVisible;
+    mapPointJson["mfMinDistance"] = mfMinDistance;
+    mapPointJson["mfMaxDistance"] = mfMaxDistance;
+
+    // 指针类型
+    if (mpRefKF && mpRefKF->isBad() == false)
+        mapPointJson["mpRefKF"] = (unsigned long long)mpRefKF->mnId;
+    else
+        mapPointJson["mpRefKF"] = Json::Value(Json::nullValue);
+
+    if (mpReplaced && mpReplaced->isBad() == false)
+        mapPointJson["mpReplaced"] = (unsigned long long)mpReplaced->mnId;
+    else
+        mapPointJson["mpReplaced"] = Json::Value(Json::nullValue);
+
+    // 容器类型(mObservations包含指针)
+    Json::Value mObservations_json(Json::arrayValue);
+    Json::Value mPosGBA_json(Json::arrayValue);
+    Json::Value mWorldPos_json(Json::arrayValue);
+    Json::Value mNormalVector_json(Json::arrayValue);
+    Json::Value mDescriptor_json(Json::arrayValue);
+
+    for (auto &item : mObservations) {
+        if (item.first && item.first->isBad() == false) {
+            Json::Value observation;
+            observation["keyframe_id"] = (unsigned long long)item.first->mnId;
+            observation["feature_id"] = (unsigned long long)item.second;
+            mObservations_json.append(observation);
+        }
+    }
+
+    if (!mPosGBA.empty()) {
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                mPosGBA_json.append(mPosGBA.at<float>(i, j));
+            }
+        }
+    }
+
+    if (!mWorldPos.empty()) {
+        for (int i = 0; i < 3; ++i) {
+            mPosGBA_json.append(mWorldPos.at<float>(i, 0));
+        }
+    }
+
+    if (!mNormalVector.empty()) {
+        for (int i = 0; i < 3; ++i) {
+            mNormalVector_json.append(mNormalVector.at<float>(i, 0));
+        }
+    }
+
+    if (!mDescriptor.empty()) {
+        for (int i = 0; i < 32; ++i) {
+            mDescriptor_json.append(mDescriptor.at<uchar>(0, i));
+        }
+    }
+
+    mapPointJson["mObservations"] = mObservations_json;
+    mapPointJson["mPosGBA"] = mPosGBA_json;
+    mapPointJson["mWorldPos"] = mWorldPos_json;
+    mapPointJson["mNormalVector"] = mNormalVector_json;
+    mapPointJson["mDescriptor"] = mDescriptor_json;
+}
+
+//! 保存地图点公共数据到JSON
+void MapPoint::saveCommonData2Json(Json::Value &commonJson) { commonJson["nNextId"] = (unsigned long long)nNextId; }
 
 } // namespace ORB_SLAM2

@@ -98,30 +98,10 @@ void Map::clear() {
     mvpKeyFrameOrigins.clear();
 }
 
-//! 添加地图的保存api
-bool Map::saveMap(const std::string &filename) {
-    // 寻找一个能用的关键帧的指针来提取那些相同的信息
-    KeyFrame *refkf = nullptr;
-    RCLCPP_INFO(rclcpp::get_logger("Map"), "地图中目前有关键帧数目为%d", mspKeyFrames.size());
-    for (auto keyframe : mspKeyFrames) {
-        if (keyframe != nullptr && keyframe->isBad() == false) {
-            refkf = keyframe;
-            break;
-        }
-    }
-    if (refkf == nullptr) {
-        RCLCPP_WARN(rclcpp::get_logger("Map"), "地图中没有可用关键帧！");
-        return false;
-    }
-    Json::Value root, keyframes, static_property;
+//! 保存地图中的关键帧
+void Map::saveKeyframesInMap(const std::string &fp) {
+    Json::Value root(Json::arrayValue);
     Json::FastWriter writer;
-
-    refkf->saveCommonData2Json(static_property);
-
-    keyframes["static_property"] = static_property;
-
-    // 将关键帧中不尽相同的数据放入JSON列表中
-    Json::Value items;
     for (auto keyframe : mspKeyFrames) {
         if (!keyframe) {
             continue;
@@ -132,15 +112,86 @@ bool Map::saveMap(const std::string &filename) {
         Json::Value item;
 
         keyframe->saveKeyFrame2Json(item);
-        items.append(item);
+        root.append(item);
     }
-    keyframes["items"] = items;
-    root["keyframes"] = keyframes;
     auto json_str = writer.write(root);
-    // std::cout << json_str << std::endl;
-    std::ofstream mapOfs(filename);
+    std::ofstream mapOfs(fp);
     mapOfs << json_str << std::endl;
+}
 
+//! 保存地图中的地图点
+void Map::saveMappointsInMap(const std::string &fp) {
+
+    Json::Value root(Json::arrayValue);
+    Json::FastWriter writer;
+    for (auto mappoint : mspMapPoints) {
+        if (!mappoint) {
+            continue;
+        }
+        if (mappoint->isBad()) {
+            continue;
+        }
+        Json::Value item;
+
+        mappoint->saveMapPoint2json(item);
+        root.append(item);
+    }
+    auto json_str = writer.write(root);
+    std::ofstream mapOfs(fp);
+    mapOfs << json_str << std::endl;
+}
+
+//! 保存公共数据的api
+bool Map::saveCommonData(const std::string &filename) {
+    KeyFrame *refkf = nullptr;
+    MapPoint *refmp = nullptr;
+    RCLCPP_INFO(rclcpp::get_logger("Map"), "地图中目前有关键帧数目为%d", mspKeyFrames.size());
+    RCLCPP_INFO(rclcpp::get_logger("Map"), "地图中目前有地图点的数目为%d", mspMapPoints.size());
+
+    // 寻找第一个可用的关键帧和地图点
+    for (auto keyframe : mspKeyFrames) {
+        if (keyframe != nullptr && keyframe->isBad() == false) {
+            refkf = keyframe;
+            break;
+        }
+    }
+    for (auto point : mspMapPoints) {
+        if (point && point->isBad() == false) {
+            refmp = point;
+            break;
+        }
+    }
+    if (refmp == nullptr) {
+        RCLCPP_WARN(rclcpp::get_logger("Map"), "地图中没有可用地图点！");
+        return false;
+    }
+    if (refkf == nullptr) {
+        RCLCPP_WARN(rclcpp::get_logger("Map"), "地图中没有可用关键帧！");
+        return false;
+    }
+    Json::Value root, kfCommon, mpCommon;
+    Json::FastWriter writer;
+    refkf->saveCommonData2Json(kfCommon);
+    refmp->saveCommonData2Json(mpCommon);
+
+    root["kfCommon"] = kfCommon;
+    root["mpCommon"] = mpCommon;
+    std::ofstream ofs(filename);
+    ofs << writer.write(root) << std::endl;
+    return true;
+}
+
+//! 添加地图的保存api
+bool Map::saveMap(const std::string &fileDir) {
+    std::string commonFp = fileDir + "common_data.json";
+    std::string kfsFp = fileDir + "keyframes.json";
+    std::string mpsFp = fileDir + "mappoints.json";
+
+    if (!saveCommonData(commonFp)) {
+        return false;
+    }
+    saveKeyframesInMap(kfsFp);
+    saveMappointsInMap(mpsFp);
     return true;
 }
 

@@ -5,6 +5,7 @@ bin/
 install/
 .vscode/
 msg_gen/
+record/
 map/
 Vocabulary/
 srv_gen/

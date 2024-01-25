@@ -1,6 +1,7 @@
 #ifndef MAPPOINT_H
 #define MAPPOINT_H
 
+#include <jsoncpp/json/json.h>
 #include <mutex>
 #include <opencv2/core/core.hpp>
 
@@ -55,6 +56,12 @@ public:
     float GetMaxDistanceInvariance();
     int PredictScale(const float &currentDist, KeyFrame *pKF);
     int PredictScale(const float &currentDist, Frame *pF);
+
+    //! 保存地图点到json
+    void saveMapPoint2json(Json::Value &mapPointJson);
+
+    //! 保存公共部分到json
+    void saveCommonData2Json(Json::Value &commonJson);
 
 public:
     long unsigned int mnId;

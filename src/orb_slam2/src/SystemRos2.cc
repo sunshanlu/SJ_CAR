@@ -41,9 +41,9 @@ bool SystemRos2::run() {
     mp_slamSystem->Shutdown();
 
     // 保存地图信息
-    RCLCPP_INFO(this->get_logger(), "正在保存地图到 /home/sj/Project/SJ_CAR/src/orb_slam2/map/map.json...");
-    saveMap("/home/sj/Project/SJ_CAR/src/orb_slam2/map/map.json");
-
+    RCLCPP_INFO(this->get_logger(), "正在保存地图到 /home/sj/Project/SJ_CAR/src/orb_slam2/map/...");
+    saveMap("/home/sj/Project/SJ_CAR/src/orb_slam2/map/");
+    RCLCPP_INFO(this->get_logger(), "地图保存成功！");
     // 统计跟踪信息
     trickStatistic();
 

@@ -2,11 +2,14 @@
 
 SystemRos2::SystemRos2()
     : Node("ORB_SLAM2") {
-    std::string voc_fp = "/home/sj/Project/SJ_CAR/src/orb_slam2/Vocabulary/ORBvoc.txt";
+    std::string voc_fp = "/home/sj/Project/SJ_CAR/Vocabulary/ORBvoc.txt";
     std::string setting_fp = "/home/sj/Project/SJ_CAR/config/KITTI00-02.yaml";
 
     mp_pose3dPub = create_publisher<Pose>("camera/pose3d", 10);
     mp_pose2dPub = create_publisher<Pose2D>("camera/pose2d", 10);
+
+    // TODO: 可以在这里新增ORB_SLAM2::System的构造函数，在这里判断是否需要加载地图（使用跟踪模式跟踪地图）
+
     mp_slamSystem = std::make_shared<ORB_SLAM2::System>(voc_fp, setting_fp, ORB_SLAM2::System::STEREO, true);
     mp_camera = Camera::getInstance();
 }
@@ -41,8 +44,8 @@ bool SystemRos2::run() {
     mp_slamSystem->Shutdown();
 
     // 保存地图信息
-    RCLCPP_INFO(this->get_logger(), "正在保存地图到 /home/sj/Project/SJ_CAR/src/orb_slam2/map/...");
-    saveMap("/home/sj/Project/SJ_CAR/src/orb_slam2/map/");
+    RCLCPP_INFO(this->get_logger(), "正在保存地图到 /home/sj/Project/SJ_CAR/map/");
+    saveMap("/home/sj/Project/SJ_CAR/map/");
     RCLCPP_INFO(this->get_logger(), "地图保存成功！");
     // 统计跟踪信息
     trickStatistic();
@@ -92,11 +95,15 @@ void SystemRos2::publishPose3D(const cv::Mat &pose3d) {
 // 保存地图
 bool SystemRos2::saveMap(const std::string &filename) {
     ORB_SLAM2::Map *map = mp_slamSystem->GetMap();
-    return map->saveMap(filename);
+    bool ret = map->saveMap(filename);
+    delete map;
+    map = nullptr;
+    return ret;
 }
 
 // 加载地图
-bool SystemRos2::loadMap(const std::string &filename) {
+bool SystemRos2::loadMap(const std::string &filename, ORB_SLAM2::ORBVocabulary *voc,
+                         ORB_SLAM2::KeyFrameDatabase *kfdb) {
     ORB_SLAM2::Map *map = mp_slamSystem->GetMap();
-    return map->loadMap(filename);
+    return map->loadMap(filename, voc, kfdb);
 }

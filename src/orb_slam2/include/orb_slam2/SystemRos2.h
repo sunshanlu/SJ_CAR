@@ -7,8 +7,8 @@
 #include <rclcpp/rclcpp.hpp>
 
 #include "Camera.h"
-#include "System.h"
 #include "Map.h"
+#include "System.h"
 
 using namespace geometry_msgs::msg;
 
@@ -23,7 +23,7 @@ public:
     bool saveMap(const std::string &filename);
 
     // 加载地图
-    bool loadMap(const std::string &filename);
+    bool loadMap(const std::string &filename, ORB_SLAM2::ORBVocabulary *voc, ORB_SLAM2::KeyFrameDatabase *kfdb);
 
 private:
     // 跟踪过程统计

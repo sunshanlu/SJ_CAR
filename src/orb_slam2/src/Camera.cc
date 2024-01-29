@@ -11,7 +11,6 @@ void Camera::getFrame(cv::Mat &leftImg, cv::Mat &rightImg, double &timestamp) {
 
 Camera::Camera() {
     m_times += 1;
-    std::cout << "Camera::Camera()" << std::endl;
     cfg.enable_stream(RS2_STREAM_INFRARED, 1, 1280, 720, RS2_FORMAT_Y8, 30);
     cfg.enable_stream(RS2_STREAM_INFRARED, 2, 1280, 720, RS2_FORMAT_Y8, 30);
     auto selection = pipe.start(cfg);

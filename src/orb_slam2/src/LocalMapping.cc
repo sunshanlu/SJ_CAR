@@ -1,6 +1,8 @@
 #include <mutex>
 #include <unistd.h>
 
+#include <rclcpp/rclcpp.hpp>
+
 #include "LocalMapping.h"
 #include "LoopClosing.h"
 #include "ORBmatcher.h"
@@ -28,7 +30,7 @@ void LocalMapping::Run() {
 
     mbFinished = false;
 
-    while (1) {
+    while (true) {
         // Tracking will see that Local Mapping is busy
         SetAcceptKeyFrames(false);
 

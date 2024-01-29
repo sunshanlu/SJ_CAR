@@ -23,6 +23,31 @@ class KeyFrame {
 public:
     KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB);
 
+    //! 添加Json对象到关键帧对象的转换
+    KeyFrame(const Json::Value &kfJson, const Json::Value &commonData);
+
+    //! 添加设置parent的api
+    void setParent(KeyFrame *pParent) { mpParent = pParent; }
+
+    //! 添加loop边
+    void insertLoopEdge(KeyFrame *kf) { mspLoopEdges.insert(kf); }
+
+    //! 添加orderedConnectKF
+    void insertOrderedConnectKF(KeyFrame *kf) { mvpOrderedConnectedKeyFrames.push_back(kf); }
+
+    //! 更新updateConnectKFandWeight
+    void updateConnectKFandWeight() {
+        mConnectedKeyFrameWeights.clear();
+        for (std::size_t idx = 0, iend = mvpOrderedConnectedKeyFrames.size(); idx < iend; ++idx) {
+            KeyFrame *connectedKF = mvpOrderedConnectedKeyFrames[idx];
+            int &weight = mvOrderedWeights[idx];
+            mConnectedKeyFrameWeights.insert(std::make_pair(connectedKF, weight));
+        }
+    }
+
+    //! 添加获取mapPoints的api
+    std::vector<MapPoint *> &getMapPoints() { return mvpMapPoints; }
+
     // Pose functions
     void SetPose(const cv::Mat &Tcw);
     cv::Mat GetPose();
@@ -97,19 +122,41 @@ public:
     void saveKeyFrame2Json(Json::Value &keyFrameJson);
     void saveCommonData2Json(Json::Value &commonJson);
 
+    //! 添加地图点的api
+    void setMapPoints(const std::vector<MapPoint *> &vpMPs) { mvpMapPoints = vpMPs; }
+
+    //! 添加连接关键帧api
+    void setConnectKeyFrames(const std::vector<KeyFrame *> &vpKFs) { mvpOrderedConnectedKeyFrames = vpKFs; }
+
+    //! 生成mConnectedKeyFrameWeights
+    void generateConnectKW() {
+        for (int i = 0; i < mvpOrderedConnectedKeyFrames.size(); i++) {
+            mConnectedKeyFrameWeights.insert(std::make_pair(mvpOrderedConnectedKeyFrames[i], mvOrderedWeights[i]));
+        }
+    }
+
+    //! 添加地图api
+    void setMap(Map *map) { mpMap = map; }
+
+    //! 添加词袋api
+    void setVoc(ORBVocabulary *voc) { mpORBvocabulary = voc; }
+
+    //! 添加关键帧数据库
+    void setKFDB(KeyFrameDatabase *kfdb) { mpKeyFrameDB = kfdb; }
+
     // The following variables are accesed from only 1 thread or never change (no mutex needed).
 public:
     static long unsigned int nNextId;
     long unsigned int mnId;
-    const long unsigned int mnFrameId;
+    long unsigned int mnFrameId;
 
-    const double mTimeStamp;
+    double mTimeStamp;
 
     // Grid (to speed up feature matching)
-    const int mnGridCols;
-    const int mnGridRows;
-    const float mfGridElementWidthInv;
-    const float mfGridElementHeightInv;
+    int mnGridCols;
+    int mnGridRows;
+    float mfGridElementWidthInv;
+    float mfGridElementHeightInv;
 
     // Variables used by the tracking
     long unsigned int mnTrackReferenceForFrame;
@@ -133,17 +180,17 @@ public:
     long unsigned int mnBAGlobalForKF;
 
     // Calibration parameters
-    const float fx, fy, cx, cy, invfx, invfy, mbf, mb, mThDepth;
+    float fx, fy, cx, cy, invfx, invfy, mbf, mb, mThDepth;
 
     // Number of KeyPoints
-    const int N;
+    int N;
 
     // KeyPoints, stereo coordinate and descriptors (all associated by an index)
-    const std::vector<cv::KeyPoint> mvKeys;
-    const std::vector<cv::KeyPoint> mvKeysUn;
-    const std::vector<float> mvuRight; // negative value for monocular points
-    const std::vector<float> mvDepth;  // negative value for monocular points
-    const cv::Mat mDescriptors;
+    std::vector<cv::KeyPoint> mvKeys;
+    std::vector<cv::KeyPoint> mvKeysUn;
+    std::vector<float> mvuRight; // negative value for monocular points
+    std::vector<float> mvDepth;  // negative value for monocular points
+    cv::Mat mDescriptors;
 
     // BoW
     DBoW2::BowVector mBowVec;
@@ -153,19 +200,19 @@ public:
     cv::Mat mTcp;
 
     // Scale
-    const int mnScaleLevels;
-    const float mfScaleFactor;
-    const float mfLogScaleFactor;
-    const std::vector<float> mvScaleFactors;
-    const std::vector<float> mvLevelSigma2;
-    const std::vector<float> mvInvLevelSigma2;
+    int mnScaleLevels;
+    float mfScaleFactor;
+    float mfLogScaleFactor;
+    std::vector<float> mvScaleFactors;
+    std::vector<float> mvLevelSigma2;
+    std::vector<float> mvInvLevelSigma2;
 
     // Image bounds and calibration
-    const int mnMinX;
-    const int mnMinY;
-    const int mnMaxX;
-    const int mnMaxY;
-    const cv::Mat mK;
+    int mnMinX;
+    int mnMinY;
+    int mnMaxX;
+    int mnMaxY;
+    cv::Mat mK;
 
     float mHalfBaseline; // Only for visualization
 
@@ -213,4 +260,6 @@ protected:
 } // namespace ORB_SLAM2
 
 void pose2Json(const cv::Mat &pose, Json::Value &jsonPose);
+
+void json2Pose(const Json::Value &jsonPose, cv::Mat &pose);
 #endif // KEYFRAME_H

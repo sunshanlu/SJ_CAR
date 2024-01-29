@@ -17,6 +17,18 @@ class Frame;
 
 class MapPoint {
 public:
+    //! 添加MapPoint的构造函数
+    MapPoint(const Json::Value &mpJson, const Json::Value &commonData);
+
+    //! 设置map函数
+    void setMap(Map *pMap) { mpMap = pMap; }
+
+    //! 设置替换地图点
+    void setReplace(MapPoint *mappoint) { mpReplaced = mappoint; }
+
+    //! 设置参考关键帧
+    void setRefKF(KeyFrame *refKF) { mpRefKF = refKF; }
+
     MapPoint(const cv::Mat &Pos, KeyFrame *pRefKF, Map *pMap);
     MapPoint(const cv::Mat &Pos, Map *pMap, Frame *pFrame, const int &idxF);
 

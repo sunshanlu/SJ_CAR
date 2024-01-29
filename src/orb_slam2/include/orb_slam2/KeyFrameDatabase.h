@@ -12,6 +12,7 @@
 
 namespace ORB_SLAM2 {
 
+class Map;
 class KeyFrame;
 class Frame;
 
@@ -30,6 +31,9 @@ public:
 
     // Relocalization
     std::vector<KeyFrame *> DetectRelocalizationCandidates(Frame *F);
+
+    //! 加载整个地图，只有在创建好地图后使用
+    void loadMap(Map *pMap);
 
 protected:
     // Associated vocabulary

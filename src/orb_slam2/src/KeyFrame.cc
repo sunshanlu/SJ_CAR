@@ -9,6 +9,134 @@ namespace ORB_SLAM2 {
 
 long unsigned int KeyFrame::nNextId = 0;
 
+//! 添加关键帧的构造函数
+KeyFrame::KeyFrame(const Json::Value &kfJson, const Json::Value &commonData) {
+
+    // common data
+    const Json::Value &commonKfData = commonData["kfCommon"];
+    cx = commonKfData["cx"].asFloat();
+    cy = commonKfData["cy"].asFloat();
+    fx = commonKfData["fx"].asFloat();
+    fy = commonKfData["fy"].asFloat();
+
+    invfx = commonKfData["invfx"].asFloat();
+    invfy = commonKfData["invfy"].asFloat();
+    mHalfBaseline = commonKfData["mHalfBaseline"].asFloat();
+    mThDepth = commonKfData["mThDepth"].asFloat();
+    mb = commonKfData["mb"].asFloat();
+    mbf = commonKfData["mbf"].asFloat();
+    mfGridElementHeightInv = commonKfData["mfGridElementHeightInv"].asFloat();
+    mfGridElementWidthInv = commonKfData["mfGridElementWidthInv"].asFloat();
+    mfLogScaleFactor = commonKfData["mfLogScaleFactor"].asFloat();
+    mfScaleFactor = commonKfData["mfScaleFactor"].asFloat();
+    mnGridCols = commonKfData["mnGridCols"].asInt();
+    mnGridRows = commonKfData["mnGridRows"].asInt();
+    mnMaxX = commonKfData["mnMaxX"].asInt();
+    mnMaxY = commonKfData["mnMaxY"].asInt();
+    mnMinX = commonKfData["mnMinX"].asInt();
+    mnMinY = commonKfData["mnMinY"].asInt();
+    mnScaleLevels = commonKfData["mnScaleLevels"].asInt();
+
+    cv::Mat matrixK(3, 3, CV_32F);
+    int s = 0;
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            matrixK.at<float>(i, j) = commonKfData["mK"][s].asFloat();
+            ++s;
+        }
+    }
+    matrixK.copyTo(mK);
+
+    for (auto begin = commonKfData["mvInvLevelSigma2"].begin(); begin != commonKfData["mvInvLevelSigma2"].end();
+         ++begin) {
+        mvInvLevelSigma2.push_back(begin->asFloat());
+    }
+
+    for (auto begin = commonKfData["mvLevelSigma2"].begin(); begin != commonKfData["mvLevelSigma2"].end(); ++begin) {
+        mvLevelSigma2.push_back(begin->asFloat());
+    }
+
+    for (auto begin = commonKfData["mvScaleFactors"].begin(); begin != commonKfData["mvScaleFactors"].end(); ++begin) {
+        mvScaleFactors.push_back(begin->asFloat());
+    }
+
+    // 需要将unsigned long long转换为long unsigned int
+    mnId = kfJson["mnId"].asUInt64();
+    mnFrameId = kfJson["mnFrameId"].asUInt64();
+    mnTrackReferenceForFrame = kfJson["mnTrackReferenceForFrame"].asUInt64();
+    mnFuseTargetForKF = kfJson["mnFuseTargetForKF"].asUInt64();
+    mnBALocalForKF = kfJson["mnBALocalForKF"].asUInt64();
+    mnBAFixedForKF = kfJson["mnBAFixedForKF"].asUInt64();
+    mnLoopQuery = kfJson["mnLoopQuery"].asUInt64();
+    mnRelocQuery = kfJson["mnRelocQuery"].asUInt64();
+    mnBAGlobalForKF = kfJson["mnBAGlobalForKF"].asUInt64();
+
+    // 可直接赋值型
+    mnLoopWords = kfJson["mnLoopWords"].asInt();
+    mTimeStamp = kfJson["mTimeStamp"].asDouble();
+    mLoopScore = kfJson["mLoopScore"].asFloat();
+    mnRelocWords = kfJson["mnRelocWords"].asInt();
+    mRelocScore = kfJson["mRelocScore"].asFloat();
+    mbFirstConnection = kfJson["mbFirstConnection"].asBool();
+    mbNotErase = kfJson["mbNotErase"].asBool();
+    mbToBeErased = kfJson["mbToBeErased"].asBool();
+    mbBad = kfJson["mbBad"].asBool();
+    N = kfJson["N"].asInt();
+
+    // cv::Mat部分，矩阵和向量
+    json2Pose(kfJson["mTcwGBA"], mTcwGBA);
+    json2Pose(kfJson["mTcwBefGBA"], mTcwBefGBA);
+    json2Pose(kfJson["mTcp"], mTcp);
+    json2Pose(kfJson["Tcw"], Tcw);
+    json2Pose(kfJson["Twc"], Twc);
+
+    cv::Mat tempOw(4, 4, CV_32F), tempCw(4, 4, CV_32F);
+    for (int i = 0; i < 3; ++i) {
+        tempOw.at<float>(i, 0) = kfJson["Ow"][i].asFloat();
+        tempCw.at<float>(i, 0) = kfJson["Cw"][i].asFloat();
+    }
+    Ow = std::move(tempOw);
+    Cw = std::move(tempCw);
+
+    // 容器部分
+    cv::Mat desc(kfJson["mvKeysUn"].size(), 32, CV_8U);
+    for (int ibeg = 0, iend = kfJson["mvKeysUn"].size(); ibeg < iend; ++ibeg) {
+        auto octave = kfJson["mvKeysUn"][ibeg]["octave"].asInt();
+        auto x = kfJson["mvKeysUn"][ibeg]["x"].asFloat();
+        auto y = kfJson["mvKeysUn"][ibeg]["y"].asFloat();
+        auto angle = kfJson["mvKeysUn"][ibeg]["angle"].asFloat();
+        mvKeys.emplace_back(x, y, 1.0, angle, 1.0, octave);
+        mvKeysUn.emplace_back(x, y, 1.0, angle, 1.0, octave);
+
+        for (int i = 0; i < 32; ++i) {
+            desc.at<uchar>(ibeg, i) = (uchar)kfJson["mDescriptors"][ibeg][i].asUInt();
+        }
+        mBowVec.insert(std::make_pair<DBoW2::WordId, DBoW2::WordValue>(
+            kfJson["mBowVec"][ibeg]["WordId"].asUInt(), kfJson["mBowVec"][ibeg]["WordValue"].asDouble()));
+    }
+    desc.copyTo(mDescriptors);
+
+    for (int ibeg = 0, iend = kfJson["mFeatVec"].size(); ibeg < iend; ++ibeg) {
+        auto &featJson = kfJson["mFeatVec"][ibeg];
+        auto nodeid = featJson["NodeId"].asUInt();
+        std::vector<unsigned> feats;
+        for (int i = 0; i < featJson["FeatureIds"].size(); ++i) {
+            feats.push_back(featJson["FeatureIds"][i].asUInt());
+        }
+        mFeatVec.insert(std::make_pair(nodeid, feats));
+    }
+    for (int ibeg = 0, iend = kfJson["mvOrderedWeights"].size(); ibeg < iend; ++ibeg)
+        mvOrderedWeights.push_back(kfJson["mvOrderedWeights"][ibeg].asInt());
+
+    for (auto begin = kfJson["mvuRight"].begin(), end = kfJson["mvuRight"].end(); begin != end; ++begin) {
+        mvuRight.push_back(begin->asFloat());
+    }
+
+    for (auto begin = kfJson["mvDepth"].begin(), end = kfJson["mvDepth"].end(); begin != end; ++begin) {
+        mvDepth.push_back(begin->asFloat());
+    }
+}
+
 KeyFrame::KeyFrame(Frame &F, Map *pMap, KeyFrameDatabase *pKFDB)
     : mnFrameId(F.mnId)
     , mTimeStamp(F.mTimeStamp)
@@ -644,37 +772,45 @@ void KeyFrame::saveKeyFrame2Json(Json::Value &keyFrameJson) {
     keyFrameJson["Ow"] = Ow_json;
     keyFrameJson["Cw"] = Cw_json;
 
-    Json::Value mvKeys_json, mvKeysUn_json, mvpMapPoints_json, mDescriptors_json;
+    // Json::Value mvKeys_json, mvKeysUn_json, mvpMapPoints_json, mDescriptors_json, mvuRight_json, mvDepth_json;
+    Json::Value mvKeysUn_json, mvpMapPoints_json, mDescriptors_json, mvuRight_json, mvDepth_json;
     for (int ibegin = 0, iend = mvKeys.size(); ibegin < iend; ++ibegin) {
         auto keypoint = mvKeys[ibegin];
         auto keypointUn = mvKeysUn[ibegin];
         auto mapPoint = mvpMapPoints[ibegin];
 
-        Json::Value keypoint_json, keypointUn_json, desc_json;
-        keypoint_json["x"] = keypoint.pt.x;
-        keypoint_json["y"] = keypoint.pt.y;
-        keypoint_json["octave"] = keypoint.octave;
+        // Json::Value keypoint_json, keypointUn_json, desc_json;
+        Json::Value keypointUn_json, desc_json;
+        // keypoint_json["x"] = keypoint.pt.x;
+        // keypoint_json["y"] = keypoint.pt.y;
+        // keypoint_json["octave"] = keypoint.octave;
+        // keypoint_json["angle"] = keypoint.angle;
 
         keypointUn_json["x"] = keypointUn.pt.x;
         keypointUn_json["y"] = keypointUn.pt.y;
         keypointUn_json["octave"] = keypointUn.octave;
+        keypointUn_json["angle"] = keypointUn.angle;
         for (int i = 0; i < 32; ++i) {
             desc_json.append(mDescriptors.at<uchar>(ibegin, i));
         }
 
-        mvKeys_json.append(keypoint_json);
+        // mvKeys_json.append(keypoint_json);
         mvKeysUn_json.append(keypointUn_json);
         mDescriptors_json.append(desc_json);
+        mvuRight_json.append(mvuRight[ibegin]);
+        mvDepth_json.append(mvDepth[ibegin]);
         if (mapPoint)
             mvpMapPoints_json.append((long long)mapPoint->mnId);
         else
             mvpMapPoints_json.append(-1);
     }
 
-    keyFrameJson["mvKeys"] = mvKeys_json;
+    // keyFrameJson["mvKeys"] = mvKeys_json;
     keyFrameJson["mvKeysUn"] = mvKeysUn_json;
     keyFrameJson["mvpMapPoints"] = mvpMapPoints_json;
     keyFrameJson["mDescriptors"] = mDescriptors_json;
+    keyFrameJson["mvuRight"] = mvuRight_json;
+    keyFrameJson["mvDepth"] = mvDepth_json;
 
     Json::Value mBowVec_json;
     for (auto keyFrameJson : mBowVec) {
@@ -732,23 +868,22 @@ void KeyFrame::saveKeyFrame2Json(Json::Value &keyFrameJson) {
     }
     keyFrameJson["mspLoopEdges"] = mspLoopEdges_json;
 
-    Json::Value mGrid_json;
-    mGrid_json.resize(0);
-    for (auto i : mGrid) {
-        Json::Value mGrid_1;
-        mGrid_1.resize(0);
-        for (auto j : i) {
-            Json::Value mGrid_2;
-            mGrid_2.resize(0);
-            for (auto k : j) {
-                mGrid_2.append((unsigned long long)k);
-            }
-            mGrid_1.append(mGrid_2);
-        }
-        mGrid_json.append(mGrid_1);
-    }
-    keyFrameJson["mGrid"] = mGrid_json;
-
+    // Json::Value mGrid_json;
+    // mGrid_json.resize(0);
+    // for (auto i : mGrid) {
+    //     Json::Value mGrid_1;
+    //     mGrid_1.resize(0);
+    //     for (auto j : i) {
+    //         Json::Value mGrid_2;
+    //         mGrid_2.resize(0);
+    //         for (auto k : j) {
+    //             mGrid_2.append((unsigned long long)k);
+    //         }
+    //         mGrid_1.append(mGrid_2);
+    //     }
+    //     mGrid_json.append(mGrid_1);
+    // }
+    // keyFrameJson["mGrid"] = mGrid_json;
 }
 
 /**
@@ -809,7 +944,20 @@ void pose2Json(const cv::Mat &pose, Json::Value &jsonPose) {
     }
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
-            jsonPose.append(pose.at<double>(i, j));
+            jsonPose.append(pose.at<float>(i, j));
         }
     }
+}
+
+void json2Pose(const Json::Value &jsonPose, cv::Mat &pose) {
+    cv::Mat tempPose(4, 4, CV_32F);
+    if (jsonPose.empty()) {
+        return;
+    }
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            tempPose.at<float>(i, j) = jsonPose[i * 4 + j].asFloat();
+        }
+    }
+    pose = std::move(tempPose);
 }

@@ -3,7 +3,7 @@
 <package format="3">
   <name>orb_slam2</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
+  <description>三江无人车项目的ORB-SLAM2感知包</description>
   <maintainer email="ssl2001@126.com">sj</maintainer>
   <license>TODO: License declaration</license>
 
@@ -11,9 +11,6 @@
 
   <depend>rclcpp</depend>
   <depend>geometry_msgs</depend>
-
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
 
   <export>
     <build_type>ament_cmake</build_type>

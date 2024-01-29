@@ -8,6 +8,58 @@ namespace ORB_SLAM2 {
 long unsigned int MapPoint::nNextId = 0;
 mutex MapPoint::mGlobalMutex;
 
+//! 添加Json::Value类型向MapPoint的类型转换
+MapPoint::MapPoint(const Json::Value &mpJson, const Json::Value &commonData) {
+    // 需要类型转换的数据
+    mnId = mpJson["mnId"].asUInt64();
+    mnFirstKFid = mpJson["mnFirstKFid"].asInt64();
+    mnFirstFrame = mpJson["mnFirstFrame"].asInt64();
+    mnTrackReferenceForFrame = mpJson["mnTrackReferenceForFrame"].asUInt64();
+    mnLastFrameSeen = mpJson["mnLastFrameSeen"].asUInt64();
+    mnBALocalForKF = mpJson["mnBALocalForKF"].asUInt64();
+    mnFuseCandidateForKF = mpJson["mnFuseCandidateForKF"].asUInt64();
+    mnLoopPointForKF = mpJson["mnLoopPointForKF"].asUInt64();
+    mnCorrectedByKF = mpJson["mnCorrectedByKF"].asUInt64();
+    mnCorrectedReference = mpJson["mnCorrectedReference"].asUInt64();
+    mnBAGlobalForKF = mpJson["mnBAGlobalForKF"].asUInt64();
+
+    // int类型的数据
+    //! 这里不使用这个方式判断的原因是在后面添加连续的时候，会进行观测数据量的更新
+    // nObs = mpJson["nObs"].asInt();
+    mnFound = mpJson["mnFound"].asInt();
+    mnVisible = mpJson["mnVisible"].asInt();
+
+    // bool类型的数据
+    mbBad = mpJson["mbBad"].asBool();
+    mbTrackInView = mpJson["mbTrackInView"].asBool();
+
+    // float类型的数据
+    mTrackProjX = mpJson["mTrackProjX"].asFloat();
+    mTrackProjY = mpJson["mTrackProjY"].asFloat();
+    mTrackProjXR = mpJson["mTrackProjXR"].asFloat();
+    mTrackViewCos = mpJson["mTrackViewCos"].asFloat();
+    mfMinDistance = mpJson["mfMinDistance"].asFloat();
+    mfMaxDistance = mpJson["mfMaxDistance"].asFloat();
+    mnTrackScaleLevel = mpJson["mnTrackScaleLevel"].asFloat();
+
+    // 容器类型的数据
+    cv::Mat jmWorldPos(3, 1, CV_32F), jmNormalVector(3, 1, CV_32F), jmDescriptor(1, 32, CV_8U);
+    int cntPose = 0;
+
+    json2Pose(mpJson["mPosGBA"], mPosGBA);
+
+    for (int i = 0; i < 3; ++i) {
+        jmWorldPos.at<float>(i, 0) = mpJson["mWorldPos"][i].asFloat();
+        jmNormalVector.at<float>(i, 0) = mpJson["mNormalVector"][i].asFloat();
+    }
+    for (int i = 0; i < 32; ++i) {
+        jmDescriptor.at<uchar>(0, i) = (uchar)mpJson["mDescriptor"][i].asUInt();
+    }
+    jmWorldPos.copyTo(mWorldPos);
+    jmNormalVector.copyTo(mNormalVector);
+    jmDescriptor.copyTo(mDescriptor);
+}
+
 MapPoint::MapPoint(const cv::Mat &Pos, KeyFrame *pRefKF, Map *pMap)
     : mnFirstKFid(pRefKF->mnId)
     , mnFirstFrame(pRefKF->mnFrameId)
@@ -424,20 +476,20 @@ void MapPoint::saveMapPoint2json(Json::Value &mapPointJson) {
         mapPointJson["mpReplaced"] = Json::Value(Json::nullValue);
 
     // 容器类型(mObservations包含指针)
-    Json::Value mObservations_json(Json::arrayValue);
+    // Json::Value mObservations_json(Json::arrayValue);
     Json::Value mPosGBA_json(Json::arrayValue);
     Json::Value mWorldPos_json(Json::arrayValue);
     Json::Value mNormalVector_json(Json::arrayValue);
     Json::Value mDescriptor_json(Json::arrayValue);
 
-    for (auto &item : mObservations) {
-        if (item.first && item.first->isBad() == false) {
-            Json::Value observation;
-            observation["keyframe_id"] = (unsigned long long)item.first->mnId;
-            observation["feature_id"] = (unsigned long long)item.second;
-            mObservations_json.append(observation);
-        }
-    }
+    // for (auto &item : mObservations) {
+    //     if (item.first && item.first->isBad() == false) {
+    //         Json::Value observation;
+    //         observation["keyframe_id"] = (unsigned long long)item.first->mnId;
+    //         observation["feature_id"] = (unsigned long long)item.second;
+    //         mObservations_json.append(observation);
+    //     }
+    // }
 
     if (!mPosGBA.empty()) {
         for (int i = 0; i < 4; ++i) {
@@ -449,7 +501,7 @@ void MapPoint::saveMapPoint2json(Json::Value &mapPointJson) {
 
     if (!mWorldPos.empty()) {
         for (int i = 0; i < 3; ++i) {
-            mPosGBA_json.append(mWorldPos.at<float>(i, 0));
+            mWorldPos_json.append(mWorldPos.at<float>(i, 0));
         }
     }
 
@@ -465,7 +517,7 @@ void MapPoint::saveMapPoint2json(Json::Value &mapPointJson) {
         }
     }
 
-    mapPointJson["mObservations"] = mObservations_json;
+    // mapPointJson["mObservations"] = mObservations_json;
     mapPointJson["mPosGBA"] = mPosGBA_json;
     mapPointJson["mWorldPos"] = mWorldPos_json;
     mapPointJson["mNormalVector"] = mNormalVector_json;

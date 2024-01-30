@@ -1,5 +1,7 @@
 #include "SystemRos2.h"
 
+using namespace std::placeholders;
+
 SystemRos2::SystemRos2()
     : Node("ORB_SLAM2") {
     std::string voc_fp = "/home/sj/Project/SJ_CAR/Vocabulary/ORBvoc.txt";
@@ -7,51 +9,52 @@ SystemRos2::SystemRos2()
 
     mp_pose3dPub = create_publisher<Pose>("camera/pose3d", 10);
     mp_pose2dPub = create_publisher<Pose2D>("camera/pose2d", 10);
+    mp_subFrame = create_subscription<sj_interfaces::msg::Frame>("camera/stereo", 10,
+                                                                 std::bind(&SystemRos2::grabFrame, this, _1));
 
     // TODO: 可以在这里新增ORB_SLAM2::System的构造函数，在这里判断是否需要加载地图（使用跟踪模式跟踪地图）
 
     mp_slamSystem = std::make_shared<ORB_SLAM2::System>(voc_fp, setting_fp, ORB_SLAM2::System::STEREO, true);
-    mp_camera = Camera::getInstance();
 }
 
-bool SystemRos2::run() {
-    RCLCPP_INFO(get_logger(), "SLAM系统开始运行...");
-    cv::Mat imLeft, imRight;
-    double tframe;
-    while (rclcpp::ok()) {
-        // 读取realsense相机图像
-        mp_camera->getFrame(imLeft, imRight, tframe);
+// bool SystemRos2::run() {
+//     RCLCPP_INFO(get_logger(), "SLAM系统开始运行...");
+//     cv::Mat imLeft, imRight;
+//     double tframe;
+//     while (rclcpp::ok()) {
+//         // 读取realsense相机图像
+//         mp_camera->getFrame(imLeft, imRight, tframe);
 
-        if (imLeft.empty()) {
-            RCLCPP_ERROR(get_logger(), "Failed to load image");
-            return false;
-        }
+//         if (imLeft.empty()) {
+//             RCLCPP_ERROR(get_logger(), "Failed to load image");
+//             return false;
+//         }
 
-        std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
-        auto framePose = mp_slamSystem->TrackStereo(imLeft, imRight, tframe);
-        // std::cout << framePose << std::endl;
-        if (framePose.empty())
-            continue;
-        publishPose3D(framePose);
+//         std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+//         auto framePose = mp_slamSystem->TrackStereo(imLeft, imRight, tframe);
+//         // std::cout << framePose << std::endl;
+//         if (framePose.empty())
+//             continue;
+//         publishPose3D(framePose);
 
-        std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+//         std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
 
-        double ttrack = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
-        mv_trickTime.push_back(ttrack);
-    }
+//         double ttrack = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+//         mv_trickTime.push_back(ttrack);
+//     }
 
-    // 停止SLAM系统的所有线程
-    mp_slamSystem->Shutdown();
+//     // 停止SLAM系统的所有线程
+//     mp_slamSystem->Shutdown();
 
-    // 保存地图信息
-    RCLCPP_INFO(this->get_logger(), "正在保存地图到 /home/sj/Project/SJ_CAR/map/");
-    saveMap("/home/sj/Project/SJ_CAR/map/");
-    RCLCPP_INFO(this->get_logger(), "地图保存成功！");
-    // 统计跟踪信息
-    trickStatistic();
+//     // 保存地图信息
+//     RCLCPP_INFO(this->get_logger(), "正在保存地图到 /home/sj/Project/SJ_CAR/map/");
+//     saveMap("/home/sj/Project/SJ_CAR/map/");
+//     RCLCPP_INFO(this->get_logger(), "地图保存成功！");
+//     // 统计跟踪信息
+//     trickStatistic();
 
-    return true;
-}
+//     return true;
+// }
 
 /**
  * @brief 用于统计跟踪信息，单位为秒
@@ -106,4 +109,34 @@ bool SystemRos2::loadMap(const std::string &filename, ORB_SLAM2::ORBVocabulary *
                          ORB_SLAM2::KeyFrameDatabase *kfdb) {
     ORB_SLAM2::Map *map = mp_slamSystem->GetMap();
     return map->loadMap(filename, voc, kfdb);
+}
+
+void SystemRos2::convert2CvMat(sj_interfaces::msg::Frame::SharedPtr frame, cv::Mat &leftImg, cv::Mat &rightImg) {
+    cv::Mat leftTmp(frame->height, frame->width, CV_8UC1, frame->left_img.data());
+    cv::Mat rightTmp(frame->height, frame->width, CV_8UC1, frame->right_img.data());
+
+    leftImg = std::move(leftTmp);
+    rightImg = std::move(rightTmp);
+}
+
+void SystemRos2::grabFrame(sj_interfaces::msg::Frame::SharedPtr frame) {
+    cv::Mat imLeft, imRight;
+    convert2CvMat(frame, imLeft, imRight);
+
+    if (imLeft.empty()) {
+        RCLCPP_ERROR(get_logger(), "Failed to load image");
+        return;
+    }
+
+    std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+    auto framePose = mp_slamSystem->TrackStereo(imLeft, imRight, frame->time_stamp);
+    // std::cout << framePose << std::endl;
+    if (framePose.empty())
+        RCLCPP_WARN(get_logger(), "跟踪丢失！");
+    // publishPose3D(framePose);
+
+    std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+
+    double ttrack = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1).count();
+    mv_trickTime.push_back(ttrack);
 }

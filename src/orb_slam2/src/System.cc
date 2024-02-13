@@ -9,79 +9,107 @@
 
 namespace ORB_SLAM2 {
 
-System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor, const bool bUseViewer)
+System::System(const string &strVocFile, const string &strSettingsFile, const string &mapFileDir, const eSensor sensor,
+               const bool buildMap, const bool trackMap, const bool bUseViewer)
     : mSensor(sensor)
     , mpViewer(static_cast<Viewer *>(NULL))
     , mbReset(false)
     , mbActivateLocalizationMode(false)
     , mbDeactivateLocalizationMode(false) {
-    // Output welcome message
 
-    if (mSensor == MONOCULAR)
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Input sensor was set to: MONOCULAR");
-    else if (mSensor == STEREO)
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Input sensor was set to: STEREO");
-    else if (mSensor == RGBD)
-        RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Input sensor was set to: RGB-D");
-
-    // Check settings file
+    switch (mSensor) {
+    case MONOCULAR:
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "输入传感器为单目相机");
+        break;
+    case STEREO:
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "输入传感器为双目相机");
+        break;
+    case RGBD:
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "输入传感器为RGB-D相机");
+        break;
+    default:
+        RCLCPP_ERROR(rclcpp::get_logger("ORB_SLAM2"), "输入传感器错误");
+        break;
+    }
     cv::FileStorage fsSettings(strSettingsFile.c_str(), cv::FileStorage::READ);
     if (!fsSettings.isOpened()) {
-        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Failed to open settings file!");
+        RCLCPP_ERROR(rclcpp::get_logger("ORB_SLAM2"), "配置文件的路径有误！");
         exit(-1);
     }
 
-    // Load ORB Vocabulary
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Loading ORB Vocabulary. This could take a while...");
-
+    // 加载ORB词袋
+    RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "正在加载ORB词袋文件...");
     mpVocabulary = new ORBVocabulary();
     bool bVocLoad = mpVocabulary->loadFromTextFile(strVocFile);
     if (!bVocLoad) {
-        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Wrong path to vocabulary. ");
-        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"), "Falied to open vocabulary file. ");
+        RCLCPP_ERROR(rclcpp::get_logger("ORB_SLAM2"), "ORB词袋文件路径有误！");
+        RCLCPP_ERROR(rclcpp::get_logger("ORB_SLAM2"), "ORB词袋加载失败！");
         exit(-1);
     }
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Vocabulary loaded!");
+    RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "ORB词袋文件加载成功！");
 
-    // Create KeyFrame Database
+    // 创建地图和关键帧数据库
     mpKeyFrameDatabase = new KeyFrameDatabase(*mpVocabulary);
-
-    // Create the Map
     mpMap = new Map();
 
-    // Create Drawers. These are used by the Viewer
+    // 创建地图绘制器
     mpFrameDrawer = new FrameDrawer(mpMap);
     mpMapDrawer = new MapDrawer(mpMap, strSettingsFile);
 
-    // Initialize the Tracking thread
-    //(it will live in the main thread of execution, the one that called this constructor)
+    // 创建跟踪器
     mpTracker = new Tracking(this, mpVocabulary, mpFrameDrawer, mpMapDrawer, mpMap, mpKeyFrameDatabase, strSettingsFile,
                              mSensor);
 
-    // Initialize the Local Mapping thread and launch
-    mpLocalMapper = new LocalMapping(mpMap, mSensor == MONOCULAR);
-    mptLocalMapping = new thread(&ORB_SLAM2::LocalMapping::Run, mpLocalMapper);
+    // 根据模式判断是否启动localMapping和loopClosing
+    if (buildMap && !trackMap) {
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "以 '构建地图模式' 启动");
+        mpLocalMapper = new LocalMapping(mpMap, mSensor == MONOCULAR);
+        mpLoopCloser = new LoopClosing(mpMap, mpKeyFrameDatabase, mpVocabulary, mSensor != MONOCULAR);
 
-    // Initialize the Loop Closing thread and launch
-    mpLoopCloser = new LoopClosing(mpMap, mpKeyFrameDatabase, mpVocabulary, mSensor != MONOCULAR);
-    mptLoopClosing = new thread(&ORB_SLAM2::LoopClosing::Run, mpLoopCloser);
+        mpTracker->SetLocalMapper(mpLocalMapper);
+        mpTracker->SetLoopClosing(mpLoopCloser);
+        mpLocalMapper->SetTracker(mpTracker);
+        mpLocalMapper->SetLoopCloser(mpLoopCloser);
+        mpLoopCloser->SetTracker(mpTracker);
+        mpLoopCloser->SetLocalMapper(mpLocalMapper);
 
-    // Initialize the Viewer thread and launch
+        // 启动局部建图线程和回环闭合线程
+        mptLocalMapping = new thread(&ORB_SLAM2::LocalMapping::Run, mpLocalMapper);
+        mptLoopClosing = new thread(&ORB_SLAM2::LoopClosing::Run, mpLoopCloser);
+    } else if (trackMap && !buildMap) {
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "以 '追踪地图模式' 启动");
+        mpTracker->setLost();
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "正在加载地图，可能需要几分钟...");
+        bool ret = LoadMap(mapFileDir);
+        if (!ret) {
+            RCLCPP_ERROR(rclcpp::get_logger("ORB_SLAM2"), "地图加载失败！");
+            exit(-1);
+        }
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "地图加载成功！");
+    } else {
+        RCLCPP_ERROR(rclcpp::get_logger("ORB_SLAM2"), "启动模式设置错误！");
+        exit(-1);
+    }
+
+    // 判断是否启动viewer进行地图可视化
     if (bUseViewer) {
         mpViewer = new Viewer(this, mpFrameDrawer, mpMapDrawer, mpTracker, strSettingsFile);
         mptViewer = new thread(&Viewer::Run, mpViewer);
         mpTracker->SetViewer(mpViewer);
     }
+}
 
-    // Set pointers between threads
-    mpTracker->SetLocalMapper(mpLocalMapper);
-    mpTracker->SetLoopClosing(mpLoopCloser);
+bool System::SaveMap(const string &fileDir) {
+    bool ret = mpMap->saveMap(fileDir);
+    delete mpMap;
+    mpMap = nullptr;
+    return ret;
+}
 
-    mpLocalMapper->SetTracker(mpTracker);
-    mpLocalMapper->SetLoopCloser(mpLoopCloser);
-
-    mpLoopCloser->SetTracker(mpTracker);
-    mpLoopCloser->SetLocalMapper(mpLocalMapper);
+bool System::LoadMap(const string &fileDir) {
+    bool ret = mpMap->loadMap(fileDir, mpVocabulary, mpKeyFrameDatabase);
+    mpKeyFrameDatabase->loadMap(mpMap);
+    return ret;
 }
 
 cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const double &timestamp) {

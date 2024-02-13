@@ -494,7 +494,7 @@ bool LocalMapping::Stop() {
     unique_lock<mutex> lock(mMutexStop);
     if (mbStopRequested && !mbNotStop) {
         mbStopped = true;
-        cout << "Local Mapping STOP" << endl;
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "Local Mapping STOP");
         return true;
     }
 
@@ -522,7 +522,7 @@ void LocalMapping::Release() {
         delete *lit;
     mlNewKeyFrames.clear();
 
-    cout << "Local Mapping RELEASE" << endl;
+    RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "Local Mapping RELEASE");
 }
 
 bool LocalMapping::AcceptKeyFrames() {

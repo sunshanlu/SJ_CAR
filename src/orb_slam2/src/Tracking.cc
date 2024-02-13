@@ -1,7 +1,9 @@
 #include <iostream>
 #include <mutex>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/features2d/features2d.hpp>
+#include <rclcpp/rclcpp.hpp>
 #include <unistd.h>
 
 #include "Converter.h"
@@ -70,26 +72,26 @@ Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer,
     mMinFrames = 0;
     mMaxFrames = fps;
 
-    cout << endl << "Camera Parameters: " << endl;
-    cout << "- fx: " << fx << endl;
-    cout << "- fy: " << fy << endl;
-    cout << "- cx: " << cx << endl;
-    cout << "- cy: " << cy << endl;
-    cout << "- k1: " << DistCoef.at<float>(0) << endl;
-    cout << "- k2: " << DistCoef.at<float>(1) << endl;
-    if (DistCoef.rows == 5)
-        cout << "- k3: " << DistCoef.at<float>(4) << endl;
-    cout << "- p1: " << DistCoef.at<float>(2) << endl;
-    cout << "- p2: " << DistCoef.at<float>(3) << endl;
-    cout << "- fps: " << fps << endl;
+    // cout << endl << "Camera Parameters: " << endl;
+    // cout << "- fx: " << fx << endl;
+    // cout << "- fy: " << fy << endl;
+    // cout << "- cx: " << cx << endl;
+    // cout << "- cy: " << cy << endl;
+    // cout << "- k1: " << DistCoef.at<float>(0) << endl;
+    // cout << "- k2: " << DistCoef.at<float>(1) << endl;
+    // if (DistCoef.rows == 5)
+    //     cout << "- k3: " << DistCoef.at<float>(4) << endl;
+    // cout << "- p1: " << DistCoef.at<float>(2) << endl;
+    // cout << "- p2: " << DistCoef.at<float>(3) << endl;
+    // cout << "- fps: " << fps << endl;
 
     int nRGB = fSettings["Camera.RGB"];
     mbRGB = nRGB;
 
-    if (mbRGB)
-        cout << "- color order: RGB (ignored if grayscale)" << endl;
-    else
-        cout << "- color order: BGR (ignored if grayscale)" << endl;
+    // if (mbRGB)
+    //     cout << "- color order: RGB (ignored if grayscale)" << endl;
+    // else
+    //     cout << "- color order: BGR (ignored if grayscale)" << endl;
 
     // Load ORB parameters
 
@@ -107,16 +109,16 @@ Tracking::Tracking(System *pSys, ORBVocabulary *pVoc, FrameDrawer *pFrameDrawer,
     if (sensor == System::MONOCULAR)
         mpIniORBextractor = new ORBextractor(2 * nFeatures, fScaleFactor, nLevels, fIniThFAST, fMinThFAST);
 
-    cout << endl << "ORB Extractor Parameters: " << endl;
-    cout << "- Number of Features: " << nFeatures << endl;
-    cout << "- Scale Levels: " << nLevels << endl;
-    cout << "- Scale Factor: " << fScaleFactor << endl;
-    cout << "- Initial Fast Threshold: " << fIniThFAST << endl;
-    cout << "- Minimum Fast Threshold: " << fMinThFAST << endl;
+    // cout << endl << "ORB Extractor Parameters: " << endl;
+    // cout << "- Number of Features: " << nFeatures << endl;
+    // cout << "- Scale Levels: " << nLevels << endl;
+    // cout << "- Scale Factor: " << fScaleFactor << endl;
+    // cout << "- Initial Fast Threshold: " << fIniThFAST << endl;
+    // cout << "- Minimum Fast Threshold: " << fMinThFAST << endl;
 
     if (sensor == System::STEREO || sensor == System::RGBD) {
         mThDepth = mbf * (float)fSettings["ThDepth"] / fx;
-        cout << endl << "Depth Threshold (Close/Far Points): " << mThDepth << endl;
+        // cout << endl << "Depth Threshold (Close/Far Points): " << mThDepth << endl;
     }
 
     if (sensor == System::RGBD) {
@@ -405,6 +407,9 @@ void Tracking::Track() {
         mlbLost.push_back(mState == LOST);
     } else {
         // This can happen if tracking is lost
+        if (mlRelativeFramePoses.empty()) {
+            return;
+        }
         mlRelativeFramePoses.push_back(mlRelativeFramePoses.back());
         mlpReferences.push_back(mlpReferences.back());
         mlFrameTimes.push_back(mlFrameTimes.back());
@@ -439,7 +444,7 @@ void Tracking::StereoInitialization() {
             }
         }
 
-        cout << "New map created with " << mpMap->MapPointsInMap() << " points" << endl;
+        RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "地图初始化成功，其中地图点有%d个", mpMap->MapPointsInMap());
 
         mpLocalMapper->InsertKeyFrame(pKFini);
 

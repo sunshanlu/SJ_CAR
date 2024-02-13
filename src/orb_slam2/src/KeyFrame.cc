@@ -90,7 +90,7 @@ KeyFrame::KeyFrame(const Json::Value &kfJson, const Json::Value &commonData) {
     json2Pose(kfJson["Tcw"], Tcw);
     json2Pose(kfJson["Twc"], Twc);
 
-    cv::Mat tempOw(4, 4, CV_32F), tempCw(4, 4, CV_32F);
+    cv::Mat tempOw(3, 1, CV_32F), tempCw(3, 1, CV_32F);
     for (int i = 0; i < 3; ++i) {
         tempOw.at<float>(i, 0) = kfJson["Ow"][i].asFloat();
         tempCw.at<float>(i, 0) = kfJson["Cw"][i].asFloat();

@@ -2,6 +2,8 @@
 #include <thread>
 #include <unistd.h>
 
+#include <rclcpp/rclcpp.hpp>
+
 #include "Converter.h"
 #include "LoopClosing.h"
 #include "ORBmatcher.h"
@@ -335,7 +337,7 @@ bool LoopClosing::ComputeSim3() {
 }
 
 void LoopClosing::CorrectLoop() {
-    cout << "Loop detected!" << endl;
+    RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "Loop detected!");
 
     // Send a stop signal to Local Mapping
     // Avoid new keyframes are inserted while correcting the loop
@@ -559,7 +561,7 @@ void LoopClosing::ResetIfRequested() {
 }
 
 void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF) {
-    cout << "Starting Global Bundle Adjustment" << endl;
+    RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "Starting Global Bundle Adjustment");
 
     int idx = mnFullBAIdx;
     Optimizer::GlobalBundleAdjustemnt(mpMap, 10, &mbStopGBA, nLoopKF, false);
@@ -574,8 +576,8 @@ void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF) {
             return;
 
         if (!mbStopGBA) {
-            cout << "Global Bundle Adjustment finished" << endl;
-            cout << "Updating map ..." << endl;
+            RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "Global Bundle Adjustment finished");
+            RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "Updating map ...");
             mpLocalMapper->RequestStop();
             // Wait until Local Mapping has effectively stopped
 
@@ -645,7 +647,7 @@ void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF) {
 
             mpLocalMapper->Release();
 
-            cout << "Map updated!" << endl;
+            RCLCPP_INFO(rclcpp::get_logger("ORB_SLAM2"), "Map updated!");
         }
 
         mbFinishedGBA = true;

@@ -132,6 +132,9 @@ void Map::saveKeyframesInMap(const std::string &fp) {
     auto json_str = writer.write(root);
     std::ofstream mapOfs(fp);
     mapOfs << json_str << std::endl;
+
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // std::cout << "关键帧保存成功！" << std::endl;
 }
 
 //! 保存地图中的地图点
@@ -154,6 +157,9 @@ void Map::saveMappointsInMap(const std::string &fp) {
     auto json_str = writer.write(root);
     std::ofstream mapOfs(fp);
     mapOfs << json_str << std::endl;
+
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // std::cout << "地图点保存成功！" << std::endl;
 }
 
 //! 保存公共数据的api
@@ -225,8 +231,9 @@ bool Map::saveMap(const std::string &fileDir) {
     std::thread saveMpThread(std::bind(&Map::saveMappointsInMap, this, mpsFp));
     saveKfThread.join();
     saveMpThread.join();
-    // saveKeyframesInMap(kfsFp);
-    // saveMappointsInMap(mpsFp);
+
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    // std::cout << "地图保存成功！" << std::endl;
     return true;
 }
 
@@ -386,17 +393,24 @@ bool Map::loadMap(const std::string &fileDir, ORBVocabulary *voc, KeyFrameDataba
         return false;
     }
 
-    std::future<bool> retKF = std::async(std::bind(&Map::loadKeyframesInFile, this, fileDir + "keyframes.json",
-                                                   std::ref(commonData), voc, kfdb, std::ref(kfpointer)));
-    std::future<bool> retMP = std::async(std::bind(&Map::loadMappointsInFile, this, fileDir + "mappoints.json",
-                                                   std::ref(commonData), std::ref(mppointer)));
+    //! jsoncpp 不支持大数据量的异步加载
+    // std::future<bool> retKF = std::async(std::bind(&Map::loadKeyframesInFile, this, fileDir + "keyframes.json",
+    //                                                std::ref(commonData), voc, kfdb, std::ref(kfpointer)));
+    // std::future<bool> retMP = std::async(std::bind(&Map::loadMappointsInFile, this, fileDir + "mappoints.json",
+    //                                                std::ref(commonData), std::ref(mppointer)));
 
-    if (retKF.get() == false || retMP.get() == false) {
+    // retKF.wait();
+    // retMP.wait();
+
+    // if (retKF.get() == false || retMP.get() == false) {
+    //     return false;
+    // }
+
+    bool ret_kf = loadKeyframesInFile(fileDir + "keyframes.json", commonData, voc, kfdb, kfpointer);
+    bool ret_mp = loadMappointsInFile(fileDir + "mappoints.json", std::ref(commonData), mppointer);
+    if (!ret_kf || !ret_mp) {
         return false;
     }
-
-    // loadKeyframesInFile(fileDir + "keyframes.json", commonData, voc, kfdb, kfpointer);
-    // loadMappointsInFile(fileDir + "mappoints.json", std::ref(commonData), mppointer);
 
     procKFandMPPointer(kfpointer, mppointer);
 
@@ -561,14 +575,6 @@ void Map::procKFandMPPointer(KFPointer &kfPointer, MPPointer &mpPointer) {
             }
         } else
             mp->setRefKF(refKF);
-    }
-}
-
-//! 在加载完成地图点后，需要创建关键帧数据库，调用该函数
-void KeyFrameDatabase::loadMap(Map *pMap) {
-    std::vector<KeyFrame *> kfs = pMap->GetAllKeyFrames();
-    for (auto &kf : kfs) {
-        add(kf);
     }
 }
 

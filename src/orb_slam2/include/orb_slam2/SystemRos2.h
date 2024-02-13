@@ -16,16 +16,30 @@ class SystemRos2 : public rclcpp::Node {
 public:
     SystemRos2();
 
+    SystemRos2(const std::string &voc_fp, const std::string &setting_fp, const std::string &map_fp,
+               ORB_SLAM2::System::eSensor sensor, bool buildMap, bool trackMap, bool bUseViewer);
+
+    ~SystemRos2() {
+        shutdown();
+        trickStatistic();
+        if (!mb_trackMap) {
+            RCLCPP_INFO(get_logger(), "正在保存地图到指定路径");
+            bool ret = saveMap();
+            if (ret) {
+                RCLCPP_INFO(get_logger(), "地图保存成功！");
+            }
+        } else {
+            RCLCPP_INFO(get_logger(), "跟踪过程顺利完成！");
+        }
+    }
+
     void shutdown() { mp_slamSystem->Shutdown(); }
 
-    // slam系统主逻辑
-    // bool run();
-
     // 保存地图
-    bool saveMap(const std::string &filename);
+    bool saveMap();
 
     // 加载地图
-    bool loadMap(const std::string &filename, ORB_SLAM2::ORBVocabulary *voc, ORB_SLAM2::KeyFrameDatabase *kfdb);
+    bool loadMap();
 
     // 跟踪过程统计
     void trickStatistic();
@@ -47,4 +61,6 @@ private:
     ORB_SLAM2::System::SharedPtr mp_slamSystem;                             ///< ORB-SLAM2系统
     std::vector<float> mv_trickTime;                                        ///< 跟踪每一帧花费时间
     rclcpp::Subscription<sj_interfaces::msg::Frame>::SharedPtr mp_subFrame; ///< 订阅帧数据
+    std::string ms_mapFp;                                                   ///< 地图文件加载和保存路径
+    bool mb_trackMap;                                                       ///< 是否是跟踪地图模式
 };

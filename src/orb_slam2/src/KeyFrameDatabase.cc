@@ -252,4 +252,12 @@ vector<KeyFrame *> KeyFrameDatabase::DetectRelocalizationCandidates(Frame *F) {
     return vpRelocCandidates;
 }
 
+//! 在加载完成地图点后，需要创建关键帧数据库，调用该函数
+void KeyFrameDatabase::loadMap(Map *pMap) {
+    std::vector<KeyFrame *> kfs = pMap->GetAllKeyFrames();
+    for (auto &kf : kfs) {
+        add(kf);
+    }
+}
+
 } // namespace ORB_SLAM2

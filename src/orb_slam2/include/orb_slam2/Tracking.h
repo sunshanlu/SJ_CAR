@@ -50,6 +50,15 @@ public:
     // Use this function if you have deactivated local mapping and you only want to localize the camera.
     void InformOnlyTracking(const bool &flag);
 
+    /**！
+     * @brief 当SLAM系统以跟踪模式启动时，需要启动该状态
+     *
+     */
+    void setLost() {
+        mState = Tracking::LOST;
+        InformOnlyTracking(true);
+    }
+
 public:
     // Tracking states
     enum eTrackingState { SYSTEM_NOT_READY = -1, NO_IMAGES_YET = 0, NOT_INITIALIZED = 1, OK = 2, LOST = 3 };

@@ -67,6 +67,9 @@ public:
     //! 增加地图获取api
     Map *GetMap() { return mpMap; }
 
+    //! 增加跟踪线程获取api
+    Tracking *GetTracker() { return mpTracker; }
+
     // All threads will be requested to finish.
     // It waits until all threads have finished.
     // This function must be called before saving the trajectory.

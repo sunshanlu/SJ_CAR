@@ -104,6 +104,27 @@ public:
 
     void clear();
 
+    //! 设置更新
+    void SetUpdated() {
+        unique_lock<mutex> lock(m_mutexUpdated);
+        mb_isUpdated = true;
+    }
+
+    //! 重置更新
+    void ResetUpdated() {
+        unique_lock<mutex> lock(m_mutexUpdated);
+        mb_isUpdated = false;
+    }
+
+    //! 查看更新
+    bool IsUpdated() {
+        if (!mb_isUpdated) {
+            return false;
+        }
+        unique_lock<mutex> lock(m_mutexUpdated);
+        return mb_isUpdated;
+    }
+
     //! 添加地图的保存api
     bool saveMap(const std::string &fileDir);
 
@@ -176,6 +197,10 @@ protected:
 
     //! 只处理地图点和地图点连接的数据
     void procMP(MPPointer &mppointer);
+
+    //! 添加地图是否更新标识
+    bool mb_isUpdated;
+    std::mutex m_mutexUpdated;
 
     std::set<MapPoint *> mspMapPoints;
     std::set<KeyFrame *> mspKeyFrames;

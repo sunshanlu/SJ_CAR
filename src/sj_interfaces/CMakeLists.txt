@@ -18,10 +18,18 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+find_package(builtin_interfaces REQUIRED)
 # uncomment the following section in order to fill in further dependencies
 # manually. find_package(<dependency> REQUIRED)
 
-rosidl_generate_interfaces(${PROJECT_NAME} "msg/Frame.msg")
+set(MSG_REL_SOURCES "")
+file(GLOB MSG_ABS_SOURCES "msg/*.msg")
+foreach(FILE_ABS ${MSG_ABS_SOURCES})
+    file(RELATIVE_PATH FILE_REL "${CMAKE_CURRENT_SOURCE_DIR}" "${FILE_ABS}")
+    list(APPEND MSG_REL_SOURCES "${FILE_REL}")
+endforeach(FILE_ABS ${MSG_ABS_SOURCES})
+
+rosidl_generate_interfaces(${PROJECT_NAME} ${MSG_REL_SOURCES} DEPENDENCIES "builtin_interfaces")
 
 if(BUILD_TESTING)
     find_package(ament_lint_auto REQUIRED)

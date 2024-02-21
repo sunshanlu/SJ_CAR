@@ -14,8 +14,11 @@ set(G2O_LIBRARY ${CMAKE_CURRENT_SOURCE_DIR}/Thridparty/lib/libg2o.so)
 # 寻找ros2相关依赖包
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(sj_interfaces REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
 
 # 寻找非ros2相关依赖包
 find_package(OpenCV 3.1.0 REQUIRED)
@@ -30,7 +33,7 @@ pkg_check_modules(JSONCPP jsoncpp)
 file(GLOB ORB_SLAM2_SRC ${PROJECT_SOURCE_DIR}/src/*.cc)
 list(FILTER ORB_SLAM2_SRC EXCLUDE REGEX ".*main.*")
 add_library(orb_slam2_lib SHARED ${ORB_SLAM2_SRC})
-ament_target_dependencies(orb_slam2_lib "rclcpp" "sensor_msgs" "sj_interfaces")
+ament_target_dependencies(orb_slam2_lib "rclcpp" "sensor_msgs" "visualization_msgs" "sj_interfaces" "sensor_msgs" "cv_bridge")
 target_link_libraries(
     orb_slam2_lib
     ${OpenCV_LIBS}
@@ -52,6 +55,7 @@ target_link_libraries(${PROJECT_NAME} orb_slam2_lib ${GFLAGS_LIBRARIES})
 # 安装target和directory到install目录中
 install(TARGETS orb_slam2_lib ${PROJECT_NAME} DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY Thridparty DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY rviz DESTINATION share/${PROJECT_NAME})
 
 # 设置target的运行时查找动态库的路径
 set_target_properties(${PROJECT_NAME} PROPERTIES INSTALL_RPATH

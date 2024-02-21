@@ -15,6 +15,7 @@ Map::Map()
 void Map::AddKeyFrame(KeyFrame *pKF) {
     unique_lock<mutex> lock(mMutexMap);
     mspKeyFrames.insert(pKF);
+    SetUpdated();
 
     // -----------------------------------
     // cv::Mat pose = pKF->GetPose();
@@ -32,6 +33,7 @@ void Map::AddKeyFrame(KeyFrame *pKF) {
 void Map::AddMapPoint(MapPoint *pMP) {
     unique_lock<mutex> lock(mMutexMap);
     mspMapPoints.insert(pMP);
+    SetUpdated();
 }
 
 void Map::EraseMapPoint(MapPoint *pMP) {

@@ -12,7 +12,9 @@ namespace ORB_SLAM2 {
 System::System(const string &strVocFile, const string &strSettingsFile, const string &mapFileDir, const eSensor sensor,
                const bool buildMap, const bool trackMap, const bool bUseViewer)
     : mSensor(sensor)
-    , mpViewer(static_cast<Viewer *>(NULL))
+    , mpViewer(nullptr)
+    , mpLocalMapper(nullptr)
+    , mpLoopCloser(nullptr)
     , mbReset(false)
     , mbActivateLocalizationMode(false)
     , mbDeactivateLocalizationMode(false) {
@@ -277,8 +279,10 @@ void System::Reset() {
 }
 
 void System::Shutdown() {
-    mpLocalMapper->RequestFinish();
-    mpLoopCloser->RequestFinish();
+    if (mpLocalMapper && mpLoopCloser) {
+        mpLocalMapper->RequestFinish();
+        mpLoopCloser->RequestFinish();
+    }
     if (mpViewer) {
         mpViewer->RequestFinish();
         while (!mpViewer->isFinished())
@@ -286,8 +290,10 @@ void System::Shutdown() {
     }
 
     // Wait until all thread have effectively stopped
-    while (!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA()) {
-        usleep(5000);
+    if (mpLocalMapper && mpLoopCloser) {
+        while (!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA()) {
+            usleep(5000);
+        }
     }
 
     if (mpViewer)

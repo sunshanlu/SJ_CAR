@@ -17,7 +17,7 @@ const static std::string KITTI_ODOM_PATH = "/media/lu/489C4BAA9C4B917C/Dataset/0
 class KittiOdom : public rclcpp::Node {
 public:
     KittiOdom(float fps)
-        : Node("kitti_odom") {
+        : Node("KITTI_ODOM") {
         mp_framePub = create_publisher<Frame>("camera/stereo", 10);
         mp_timer = create_wall_timer(1s / fps, std::bind(&KittiOdom::timerCallback, this));
     }

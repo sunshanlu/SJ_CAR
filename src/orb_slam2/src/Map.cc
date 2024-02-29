@@ -233,6 +233,8 @@ bool Map::saveMap(const std::string &fileDir) {
     std::thread saveMpThread(std::bind(&Map::saveMappointsInMap, this, mpsFp));
     saveKfThread.join();
     saveMpThread.join();
+    // saveKeyframesInMap(kfsFp);
+    // saveMappointsInMap(mpsFp);
 
     //!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     // std::cout << "地图保存成功！" << std::endl;
@@ -409,7 +411,7 @@ bool Map::loadMap(const std::string &fileDir, ORBVocabulary *voc, KeyFrameDataba
     // }
 
     bool ret_kf = loadKeyframesInFile(fileDir + "keyframes.json", commonData, voc, kfdb, kfpointer);
-    bool ret_mp = loadMappointsInFile(fileDir + "mappoints.json", std::ref(commonData), mppointer);
+    bool ret_mp = loadMappointsInFile(fileDir + "mappoints.json", commonData, mppointer);
     if (!ret_kf || !ret_mp) {
         return false;
     }

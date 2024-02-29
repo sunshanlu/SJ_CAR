@@ -13,8 +13,8 @@ public:
     void timerCallback();
 
 private:
-    rs2::config cfg;
-    rs2::pipeline pipe;
+    rs2::config m_cfg;
+    rs2::pipeline m_pipe;
     rclcpp::Publisher<Frame>::SharedPtr mp_publisher;
     rclcpp::TimerBase::SharedPtr mp_timer;
     unsigned m_width;

@@ -12,7 +12,7 @@
 using sj_interfaces::msg::Frame;
 using namespace std::chrono_literals;
 
-const static std::string KITTI_ODOM_PATH = "/media/lu/489C4BAA9C4B917C/Dataset/00";
+const static std::string KITTI_ODOM_PATH = "/home/sj/Dataset/KITTI-ODOM/00";
 
 class KittiOdom : public rclcpp::Node {
 public:

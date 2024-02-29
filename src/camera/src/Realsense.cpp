@@ -4,9 +4,18 @@ Camera::Camera(const std::string &node_name, float fps, unsigned width, unsigned
     : Node(node_name)
     , m_width(width)
     , m_height(height) {
-    cfg.enable_stream(RS2_STREAM_INFRARED, 1, width, height, RS2_FORMAT_Y8, fps);
-    cfg.enable_stream(RS2_STREAM_INFRARED, 2, width, height, RS2_FORMAT_Y8, fps);
-    auto selection = pipe.start(cfg);
+    m_cfg.enable_stream(RS2_STREAM_INFRARED, 1, width, height, RS2_FORMAT_Y8, fps);
+    m_cfg.enable_stream(RS2_STREAM_INFRARED, 2, width, height, RS2_FORMAT_Y8, fps);
+    rs2::pipeline_profile selection;
+    while (rclcpp::ok()) {
+        try {
+            selection = m_pipe.start(m_cfg);
+            break;
+        } catch (rs2::error &e) {
+            RCLCPP_INFO(get_logger(), "无法启动相机，原因：%s", e.what());
+            std::this_thread::sleep_for(1s);
+        }
+    }
     auto depthSensor = selection.get_device().first<rs2::depth_sensor>();
     depthSensor.set_option(RS2_OPTION_LASER_POWER, 0);
 
@@ -22,7 +31,7 @@ void Camera::timerCallback() {
     frameMsg.width = m_width;
     frameMsg.height = m_height;
 
-    rs2::frameset frame = pipe.wait_for_frames();
+    rs2::frameset frame = m_pipe.wait_for_frames();
     frameMsg.time_stamp = frame.get_timestamp();
     auto leftFrame = frame.get_infrared_frame(1);
     auto rightFrame = frame.get_infrared_frame(2);

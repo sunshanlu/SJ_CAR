@@ -7,10 +7,10 @@ using namespace std;
 
 DEFINE_bool(build_map, true, "是否以构建地图的方式启动，默认为 true");
 DEFINE_bool(track_map, false, "是否以追踪地图的方式启动，默认为 false");
-DEFINE_bool(show_map, true, "是否启用Viewer线程，默认为 true");
-DEFINE_string(voc_fp, "/home/lu/Project/SJ_CAR/Vocabulary/ORBvoc.txt", "词袋文件的加载路径");
-DEFINE_string(setting_fp, "/home/lu/Project/SJ_CAR/config/KITTI00-02.yaml", "配置文件的加载路径");
-DEFINE_string(map_fp, "/home/lu/Project/SJ_CAR/map/", "地图文件的加载路径");
+DEFINE_bool(show_map, false, "是否启用Viewer线程，默认为 true");
+DEFINE_string(voc_fp, "/home/sj/Project/SJ_CAR/Vocabulary/ORBvoc.txt", "词袋文件的加载路径");
+DEFINE_string(setting_fp, "/home/sj/Project/SJ_CAR/config/sj_slam_setting.yaml", "配置文件的加载路径");
+DEFINE_string(map_fp, "/home/sj/Project/SJ_CAR/map/", "地图文件的加载路径");
 DEFINE_string(params_file, " ", "param参数，需要忽略");
 DEFINE_string(ros_args, " ", "ros-args参数，需要忽略");
 

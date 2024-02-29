@@ -6,7 +6,7 @@ from launch_ros.actions import Node
 from ament_index_python import get_package_share_directory
 
 voc_fp = "/home/sj/Project/SJ_CAR/Vocabulary/ORBvoc.txt"  # 词袋文件路径
-setting_fp = "/home/sj/Project/SJ_CAR/config/kitti_slam_setting.yaml"  # ORB-SLAM2配置路径
+setting_fp = "/home/sj/Project/SJ_CAR/config/sj_slam_setting.yaml"  # ORB-SLAM2配置路径
 map_fp = "/home/sj/Project/SJ_CAR/map/"  # 地图保存和加载路径
 
 # SJ_TF参数（以m为单位）
@@ -27,8 +27,7 @@ def generate_launch_description():
                                 f"--voc_fp={voc_fp}", f"--setting_fp={setting_fp}", f"--map_fp={map_fp}"],
                      sigterm_timeout="20"
                      )
-    kitti_odom = Node(package="kitti_odom",
-                      executable="kitti_odom", output="screen", arguments=["11"])
+    # camera = Node(package="camera", executable="camera", output="screen")
 
     rviz = Node(package="rviz2",
                 executable="rviz2", output="screen",
@@ -45,14 +44,13 @@ def generate_launch_description():
         package="sj_tf", executable="BaseLinkPublisher", output="screen")
 
     orb_slam2.cmd.pop()
-    kitti_odom.cmd.pop()
     tf_base_camera.cmd.pop()
     tf_map_world.cmd.pop()
     rviz.cmd.pop()
 
     return LaunchDescription([
         orb_slam2,
-        kitti_odom,
+        # camera,
         rviz,
         tf_base_camera,
         tf_map_world,

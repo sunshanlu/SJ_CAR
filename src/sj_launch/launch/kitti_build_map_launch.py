@@ -7,9 +7,9 @@ from ament_index_python import get_package_share_directory
 
 
 # ORB-SLAM2参数
-voc_fp = "/home/lu/Project/SJ_CAR/Vocabulary/ORBvoc.txt"  # 词袋文件路径
-setting_fp = "/home/lu/Project/SJ_CAR/config/KITTI00-02.yaml"  # ORB-SLAM2配置路径
-map_fp = "/home/lu/Project/SJ_CAR/map/"  # 地图保存和加载路径
+voc_fp = "/home/sj/Project/SJ_CAR/Vocabulary/ORBvoc.txt"  # 词袋文件路径
+setting_fp = "/home/sj/Project/SJ_CAR/config/kitti_slam_setting.yaml"  # ORB-SLAM2配置路径
+map_fp = "/home/sj/Project/SJ_CAR/map/"  # 地图保存和加载路径
 
 # SJ_TF参数（以m为单位）
 trans_x = 1.0

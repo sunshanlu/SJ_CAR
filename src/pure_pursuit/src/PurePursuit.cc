@@ -96,8 +96,8 @@ void PurePursuit::pursuit(BaseLink::SharedPtr msg) {
     }
     if (backFlag) {
         ctlTwist.linear.x = -m_xSpeed;
-        // ctlTwist.angular.z = -angle * sacle;
-        ctlTwist.angular.z = angle * sacle;
+        ctlTwist.angular.z = -angle * sacle;
+        // ctlTwist.angular.z = angle * sacle;
     } else {
         ctlTwist.linear.x = m_xSpeed;
         ctlTwist.angular.z = angle * sacle;
@@ -278,11 +278,11 @@ PointPose symmetrizatePoint(BaseLink::SharedPtr msg, const PointPose &point, con
 
     PointPose goalPoint;
     Eigen::Matrix2d Rbw, Rwb;
-    Eigen::Vector2d twb, tbw(msg->position.x, msg->position.y);
-    Rbw << std::cos(msg->position.yaw), -std::sin(msg->position.yaw), std::sin(msg->position.yaw),
+    Eigen::Vector2d tbw, twb(msg->position.x, msg->position.y);
+    Rwb << std::cos(msg->position.yaw), -std::sin(msg->position.yaw), std::sin(msg->position.yaw),
         std::cos(msg->position.yaw);
-    Rwb = Rbw.transpose();
-    twb = -Rwb * tbw;
+    Rbw = Rwb.transpose();
+    tbw = -Rbw * twb;
 
     Eigen::Vector2d Gw(point.x, point.y);
     Eigen::Vector2d Gb = Rbw * Gw + tbw;

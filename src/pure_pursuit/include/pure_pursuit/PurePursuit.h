@@ -5,6 +5,7 @@
 
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <eigen3/Eigen/Dense>
 
 #include "sj_interfaces/msg/base_link.hpp"
 

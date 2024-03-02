@@ -96,7 +96,8 @@ void PurePursuit::pursuit(BaseLink::SharedPtr msg) {
     }
     if (backFlag) {
         ctlTwist.linear.x = -m_xSpeed;
-        ctlTwist.angular.z = -angle * sacle;
+        // ctlTwist.angular.z = -angle * sacle;
+        ctlTwist.angular.z = angle * sacle;
     } else {
         ctlTwist.linear.x = m_xSpeed;
         ctlTwist.angular.z = angle * sacle;
@@ -258,21 +259,46 @@ void PurePursuit::turnBack() {
  */
 PointPose symmetrizatePoint(BaseLink::SharedPtr msg, const PointPose &point, const double &lf) {
 
-    double theta = std::atan2(point.y - msg->position.y, point.x - msg->position.x);
-    double beta = theta - msg->position.yaw - M_PI / 2;
-    double delta = theta - 2 * beta;
-    double dx = lf * std::cos(delta);
-    double dy = lf * std::sin(delta);
-    PointPose goalPoint;
-    goalPoint.x = msg->position.x + dx;
-    goalPoint.y = msg->position.y + dy;
+    // double theta = std::atan2(point.y - msg->position.y, point.x - msg->position.x);
+    // double beta = theta - msg->position.yaw - M_PI / 2;
+    // double delta = theta - 2 * beta;
+    // double dx = lf * std::cos(delta);
+    // double dy = lf * std::sin(delta);
+    // PointPose goalPoint;
+    // goalPoint.x = msg->position.x + dx;
+    // goalPoint.y = msg->position.y + dy;
 
-    // TODO：这里的目标点航向角没有计算，若要使用，记得计算！
-    goalPoint.yaw = -point.yaw;
-    std::cout << "theta: " << theta << "\t"
-              << "beta: " << beta << "\t"
-              << "delta: " << delta << "\t"
-              << "dx: " << dx << "\t"
-              << "dy: " << dy << std::endl;
+    // // TODO：这里的目标点航向角没有计算，若要使用，记得计算！
+    // goalPoint.yaw = -point.yaw;
+    // std::cout << "theta: " << theta << "\t"
+    //           << "beta: " << beta << "\t"
+    //           << "delta: " << delta << "\t"
+    //           << "dx: " << dx << "\t"
+    //           << "dy: " << dy << std::endl;
+
+    PointPose goalPoint;
+    Eigen::Matrix2d Rbw, Rwb;
+    Eigen::Vector2d twb, tbw(msg->position.x, msg->position.y);
+    Rbw << std::cos(msg->position.yaw), -std::sin(msg->position.yaw), std::sin(msg->position.yaw),
+        std::cos(msg->position.yaw);
+    Rwb = Rbw.transpose();
+    twb = -Rwb * tbw;
+
+    Eigen::Vector2d Gw(point.x, point.y);
+    Eigen::Vector2d Gb = Rbw * Gw + tbw;
+    Eigen::Vector2d GbSym(-Gb.x(), Gb.y());
+    Eigen::Vector2d GwSym = Rwb * GbSym + twb;
+
+    /// 下面开始对称目标点偏航角
+    Eigen::Vector2d GwYaw(std::tan(point.yaw), 1);
+    Eigen::Vector2d GbYaw = Rbw * GwYaw;
+    Eigen::Vector2d GbYawSym(-GbYaw.x(), GbYaw.y());
+    Eigen::Vector2d GwYawSym = Rwb * GbYawSym;
+    double yawSym = std::atan2(GwYawSym.y(), GwYawSym.x());
+
+    goalPoint.x = GwSym.x();
+    goalPoint.y = GwSym.y();
+    goalPoint.yaw = yawSym;
+
     return goalPoint;
 }

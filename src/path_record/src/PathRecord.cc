@@ -8,7 +8,7 @@
 PathRecord::PathRecord(std::string pfp)
     : Node("Path_Record")
     , m_pfp(std::move(pfp)) {
-    m_ofs.open(m_pfp, std::ios::app);
+    m_ofs.open(m_pfp, std::ios::out);
     m_ofs << "x\ty\tyaw\n";
     mp_basePos = create_subscription<BaseLink>("base/massage", 10, std::bind(&PathRecord::save2str, this, _1));
 }

@@ -10,9 +10,9 @@ setting_fp = "/home/sj/Project/SJ_CAR/config/sj_slam_setting.yaml"  # ORB-SLAM2�
 map_fp = "/home/sj/Project/SJ_CAR/map/"  # 地图保存和加载路径
 
 # SJ_TF参数（以m为单位）
-trans_x = 0.69
+trans_x = 0.21375
 trans_y = 0.0
-trans_z = 0.28
+trans_z = 0.635
 rot_yaw = -math.pi / 2
 rot_pitch = 0.0
 rot_roll = -math.pi / 2
